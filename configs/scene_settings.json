@@ -1,6 +1,6 @@
 {
     "mars": {
-        "center": [3, 3, 5],
+        "center": [2, 2, 4],
         "radius": 1,
         "color": [0, 1, 0],
         "reflection": 0.1,

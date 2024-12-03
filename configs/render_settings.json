@@ -1,7 +1,12 @@
 {
-    "test1": {
-        "width": 50,
-        "height": 50,
+    "basic_1_sample": {
+        "width": 1000,
+        "height": 1000,
         "samples_per_pixel": 1
+    },
+    "basic_10_samples": {
+        "width": 1000,
+        "height": 1000,
+        "samples_per_pixel": 10
     }
 }
