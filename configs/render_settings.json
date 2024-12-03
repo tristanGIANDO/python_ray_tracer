@@ -1,12 +1,7 @@
 {
     "test1": {
-        "width": 400,
-        "height": 300,
-        "samples_per_pixel": 1
-    },
-    "test2": {
-        "width": 1000,
-        "height": 1000,
+        "width": 50,
+        "height": 50,
         "samples_per_pixel": 1
     }
 }
