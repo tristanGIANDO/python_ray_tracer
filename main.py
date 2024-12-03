@@ -3,11 +3,11 @@ from PIL import Image
 import time
 import json
 from pathlib import Path
-from vector import Vec3
-from objects import Sphere
-from path_tracing import render
+from src.vector import Vec3
+from src.objects import Sphere
+from src.path_tracing import render
 
-scene_settings = json.load(open("scene_settings.json"))
+scene_settings = json.load(open("configs/scene_settings.json"))
 
 scene = []
 for settings in scene_settings.values():
@@ -23,7 +23,7 @@ for settings in scene_settings.values():
     )
 
 
-render_settings = json.load(open("render_settings.json"))
+render_settings = json.load(open("configs/render_settings.json"))
 
 for test_index, settings in render_settings.items():
     start = time.time()
