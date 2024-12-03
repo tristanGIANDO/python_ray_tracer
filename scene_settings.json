@@ -1,0 +1,22 @@
+{
+    "sphere1": {
+        "center": [0, -0.5, 3],
+        "radius": 0.5,
+        "color": [1, 0, 0],
+        "reflection": 0.6
+    },
+    "sphere2": {
+        "center": [1, 0, 4],
+        "radius": 1,
+        "color": [0, 1, 0],
+        "reflection": 0.4,
+        "texture": "resource/2k_earth_daymap.jpg"
+    },
+    "sphere3": {
+        "center": [-1, 0, 2.5],
+        "radius": 0.3,
+        "color": [0, 0, 1],
+        "reflection": 0.8,
+        "texture": "resource/2k_moon.jpg"
+    }
+}
