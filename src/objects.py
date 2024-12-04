@@ -1,6 +1,6 @@
 import numpy as np
 
-from vector import Vec3
+from src.vector import Vec3
 
 
 def get_texture_color(texture, u, v):
