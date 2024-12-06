@@ -4,7 +4,7 @@ import time
 import json
 from pathlib import Path
 from src.vector import Vec3
-from src.objects import Sphere
+from src.objects import Sphere, Light, EmissiveSphere
 from src.path_tracing import render
 
 scene_settings = json.load(open("configs/scene_settings.json"))
@@ -21,6 +21,11 @@ for settings in scene_settings.values():
             texture,
         )
     )
+
+lights = [
+    Light(Vec3(5, 5, -10), Vec3(1, 1, 1)),  # Lumière ponctuelle
+    EmissiveSphere(Vec3(0, 5, 3), 1, Vec3(1, 0.8, 0.6), 5)  # Lumière de surface
+]
 
 
 render_settings = json.load(open("configs/render_settings.json"))
