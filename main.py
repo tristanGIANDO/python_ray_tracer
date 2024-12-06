@@ -2,38 +2,77 @@ import numpy as np
 from PIL import Image
 import time
 import json
-from pathlib import Path
-from src.vector import Vec3
-from src.objects import Sphere, Light, EmissiveSphere
-from src.path_tracing import render
-
-scene_settings = json.load(open("configs/scene_settings.json"))
-
-scene = []
-for settings in scene_settings.values():
-    texture = Image.open(settings["texture"]) if "texture" in settings else None
-    scene.append(
-        Sphere(
-            Vec3(*settings["center"]),
-            settings["radius"],
-            Vec3(*settings["color"]),
-            settings["reflection"],
-            texture,
-        )
-    )
-
-lights = [
-    Light(Vec3(5, 5, -10), Vec3(1, 1, 1)),  # Lumière ponctuelle
-    EmissiveSphere(Vec3(0, 5, 3), 1, Vec3(1, 0.8, 0.6), 5)  # Lumière de surface
-]
+from src.vectors import Vector3D
+from src.objects import Sphere, Light
+from src.ray_tracing import render
+from dataclasses import dataclass
 
 
-render_settings = json.load(open("configs/render_settings.json"))
+@dataclass
+class SceneConfig:
+    data: dict
 
-for test_index, settings in render_settings.items():
+
+@dataclass
+class RenderConfig:
+    data: dict
+
+
+def load_configs() -> tuple[dict, dict]:
+    scene_settings = SceneConfig(json.load(open("configs/scene_settings.json")))
+    render_settings = RenderConfig(json.load(open("configs/render_settings.json")))
+
+    return scene_settings, render_settings
+
+
+def build_scene(config: SceneConfig) -> tuple[list[Sphere], list[Light]]:
+    objects = []
+    lights = []
+
+    for settings in config.data.values():
+        if settings["type"] == "Light":
+            lights.append(
+                Light(Vector3D(*settings["position"]), Vector3D(*settings["intensity"]))
+            )
+
+        elif settings["type"] == "Sphere":
+            texture = (
+                np.array(Image.open(settings["texture"]))
+                if "texture" in settings
+                else None
+            )
+            objects.append(
+                Sphere(
+                    center=Vector3D(*settings["center"]),
+                    radius=settings["radius"],
+                    color=Vector3D(*settings["color"]),
+                    reflection=settings["reflection"],
+                    texture=texture,
+                )
+            )
+
+    return objects, lights
+
+
+def batch_render(scene_content, config: RenderConfig):
+    objects, lights = scene_content
+
+    for settings in list(config.data.values()):
+        image = render(objects, lights, **settings)
+        Image.fromarray((image * 255).astype(np.uint8)).save("render.png")
+
+
+def main():
     start = time.time()
-    image = render(scene, **settings)
-    print(f"Rendered {test_index} in {time.time() - start:.2f} seconds")
+    scene_config, render_config = load_configs()
+    print(f"Loaded configs in {time.time() - start:.2f} seconds")
+    start = time.time()
+    scene_content = build_scene(scene_config)
+    print(f"Built scene in {time.time() - start:.2f} seconds")
+    start = time.time()
+    batch_render(scene_content, render_config)
+    print(f"Rendered images in {time.time() - start:.2f} seconds")
 
-    output_image_filepath = Path("output") / f"{test_index}_render.png"
-    Image.fromarray((image * 255).astype(np.uint8)).save(output_image_filepath)
+
+if __name__ == "__main__":
+    main()

@@ -1,12 +1,13 @@
 {
     "mars": {
+        "type": "Sphere",
         "center": [2, 2, 4],
         "radius": 1,
         "color": [0, 1, 0],
-        "reflection": 0.1,
-        "texture": "resource/2k_mars.jpg"
+        "reflection": 0.9
     },
     "earth": {
+        "type": "Sphere",
         "center": [0, 0, 1.5],
         "radius": 1,
         "color": [0, 1, 0],
@@ -14,10 +15,16 @@
         "texture": "resource/2k_earth_daymap.jpg"
     },
     "moon": {
+        "type": "Sphere",
         "center": [-0.5, -0.2, 0],
         "radius": 0.25,
         "color": [0, 0, 1],
         "reflection": 0.2,
         "texture": "resource/2k_moon.jpg"
+    },
+    "light1": {
+        "type": "Light",
+        "position": [5, 10, -10],
+        "intensity": [1, 1, 1]
     }
 }
