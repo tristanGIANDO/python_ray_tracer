@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image
 
-from src.vectors import Vector3D
+from ray_tracer.vectors import Vector3D
 
 
 def get_texture_color(texture: Image, u: float, v: float) -> Vector3D:

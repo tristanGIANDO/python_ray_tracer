@@ -1,7 +1,7 @@
 import numpy as np
 
-from src.vectors import Vector3D
-from src.utils import get_texture_color
+from ray_tracer.vectors import Vector3D
+from ray_tracer.utils import get_texture_color
 
 
 class Light:
