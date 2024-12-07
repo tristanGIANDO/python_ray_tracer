@@ -12,7 +12,7 @@
         "radius": 1,
         "color": [0, 1, 0],
         "reflection": 0.9,
-        "texture": "resource/2k_earth_daymap.jpg"
+        "texture": "sourceimages/2k_earth_daymap.jpg"
     },
     "moon": {
         "type": "Sphere",
@@ -20,7 +20,7 @@
         "radius": 0.25,
         "color": [0, 0, 1],
         "reflection": 0.2,
-        "texture": "resource/2k_moon.jpg"
+        "texture": "sourceimages/2k_moon.jpg"
     },
     "light1": {
         "type": "Light",
