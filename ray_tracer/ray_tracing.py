@@ -1,7 +1,7 @@
 import numpy as np
 
-from src.vectors import Vector3D
-from src.objects import Sphere, Light
+from ray_tracer.vectors import Vector3D
+from ray_tracer.objects import Sphere, Light
 
 
 def trace(
@@ -76,7 +76,7 @@ def render(
     It calculates the direction of each ray and uses the `trace` function to determine the color based on object interactions.
     """
     aspect_ratio = float(width) / height
-    camera = Vector3D(0, 0, -1)
+    camera = Vector3D(0, 0, -10)
     screen = (-1, 1 / aspect_ratio, 1, -1 / aspect_ratio)
 
     image = np.zeros((height, width, 3))
