@@ -121,7 +121,7 @@ def render(
     lights: list[Light],
     width: int,
     height: int,
-    samples_per_pixel: int = 8,  # Nombre de rayons par pixel
+    samples_per_pixel: int = 1,  # Nombre de rayons par pixel
 ) -> np.ndarray:
     aspect_ratio = float(width) / height
     camera = Vector3D(0, 0, -10)
