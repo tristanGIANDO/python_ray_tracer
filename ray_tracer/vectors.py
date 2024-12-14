@@ -60,6 +60,20 @@ class Vector3D:
             return Vector3D(self.x * scalar.x, self.y * scalar.y, self.z * scalar.z)
         return Vector3D(self.x * scalar, self.y * scalar, self.z * scalar)
 
+    def __truediv__(self, scalar: float) -> "Vector3D":
+        """
+        Divise le vecteur par un scalaire.
+
+        Args:
+            scalar (float): Le scalaire par lequel diviser.
+
+        Returns:
+            Vector3D: Un nouveau vecteur avec chaque composant divisé par le scalaire.
+        """
+        if scalar == 0:
+            raise ValueError("Division par zéro non autorisée pour un vecteur.")
+        return Vector3D(self.x / scalar, self.y / scalar, self.z / scalar)
+
     def dot(self, other: "Vector3D") -> float:
         """
         Computes the dot product of two vectors.
@@ -101,23 +115,24 @@ class Vector3D:
 
     def perturb(self, roughness: float) -> "Vector3D":
         """
-        Perturbe ce vecteur en fonction de la roughness.
+        Perturbe ce vecteur en fonction de la roughness en utilisant un échantillonnage pondéré.
 
         Args:
-            roughness (float): Un facteur de rugosité entre 0 et 1 (0 = lisse, 1 = très rugueux).
+            roughness (float): Facteur de rugosité (0 = lisse, 1 = rugueux).
 
         Returns:
-            Vector3D: Un vecteur perturbé pour simuler la rugosité.
-
-        Cette méthode génère un petit vecteur aléatoire, proportionnel à la roughness,
-        et l'ajoute au vecteur actuel avant de normaliser le résultat.
+            Vector3D: Vecteur perturbé en fonction de la rugosité.
         """
-        random_perturbation = (
-            Vector3D(
-                np.random.uniform(-1, 1),
-                np.random.uniform(-1, 1),
-                np.random.uniform(-1, 1),
-            ).norm()
-            * roughness
-        )
-        return (self + random_perturbation).norm()
+        if roughness <= 0:
+            return self.norm()  # Aucune perturbation si la rugosité est nulle.
+
+        # Générer un vecteur aléatoire dans un hémisphère autour de 'self'
+        random_dir = Vector3D(
+            np.random.normal(0, 1),
+            np.random.normal(0, 1),
+            np.random.normal(0, 1),
+        ).norm()
+
+        # Combiner la direction originale et la direction aléatoire selon la roughness
+        perturbed_dir = self * (1 - roughness) + random_dir * roughness
+        return perturbed_dir.norm()

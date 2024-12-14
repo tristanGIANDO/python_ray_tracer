@@ -66,7 +66,7 @@ def trace(
     ):
         reflected_dir = (ray_dir - normal * (2 * normal.dot(ray_dir))).norm()
 
-        # Ajout de roughness
+        # Appliquer la roughness si elle est définie
         if hasattr(nearest_obj, "roughness") and nearest_obj.roughness > 0:
             reflected_dir = reflected_dir.perturb(nearest_obj.roughness)
 
@@ -76,10 +76,13 @@ def trace(
         )
         reflection_contribution = reflection_color * nearest_obj.reflection
 
+    ambient_light = Vector3D(0.1, 0.1, 0.1)
+    color = color * (light_contribution + ambient_light)
+
     return color * light_contribution + reflection_contribution
 
 
-def render(
+def render_ray_tracer(
     scene: list[Sphere], lights: list[Light], width: int, height: int
 ) -> np.ndarray:
     """
@@ -109,5 +112,32 @@ def render(
             ray_dir = (pixel - camera).norm()
             color = trace(camera, ray_dir, scene, lights)
             image[i, j] = np.clip(color.components(), 0, 1)
+
+    return image
+
+
+def render(
+    scene: list[Sphere],
+    lights: list[Light],
+    width: int,
+    height: int,
+    samples_per_pixel: int = 8,  # Nombre de rayons par pixel
+) -> np.ndarray:
+    aspect_ratio = float(width) / height
+    camera = Vector3D(0, 0, -10)
+    screen = (-1, 1 / aspect_ratio, 1, -1 / aspect_ratio)
+
+    image = np.zeros((height, width, 3))
+    for i, y in enumerate(np.linspace(screen[1], screen[3], height)):
+        for j, x in enumerate(np.linspace(screen[0], screen[2], width)):
+            pixel_color = Vector3D(0, 0, 0)
+            for _ in range(samples_per_pixel):
+                # Ajouter une petite variation aléatoire pour chaque rayon
+                u = np.random.uniform(-1 / width, 1 / width)
+                v = np.random.uniform(-1 / height, 1 / height)
+                pixel = Vector3D(x + u, y + v, 0)
+                ray_dir = (pixel - camera).norm()
+                pixel_color += trace(camera, ray_dir, scene, lights)
+            image[i, j] = np.clip((pixel_color / samples_per_pixel).components(), 0, 1)
 
     return image
