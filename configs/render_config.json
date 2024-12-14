@@ -1,6 +1,8 @@
 {
     "0": {
-        "width": 50,
-        "height": 50
+        "width": 500,
+        "height": 500,
+        "hdri": "sourceimages/hdri_2.jpg",
+        "denoise": false
     }
 }
