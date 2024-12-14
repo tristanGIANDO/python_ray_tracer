@@ -1,6 +1,7 @@
 import numpy as np
 
 from ray_tracer.objects import Light, Sphere
+from ray_tracer.utils import HDRIEnvironment
 from ray_tracer.vectors import Vector3D
 
 
@@ -11,6 +12,7 @@ def trace(
     lights: list[Light],
     depth: int = 0,
     max_depth: int = 3,
+    environment: HDRIEnvironment | None = None,
 ) -> Vector3D:
     """
     Traces a ray through the scene to determine the color at a given point, including reflections.
@@ -33,14 +35,14 @@ def trace(
             nearest_t, nearest_obj = t, obj
 
     if nearest_obj is None:
-        return Vector3D(0, 0, 0)  # Background color (black)
+        # Retourner la couleur de l'environnement si aucune intersection
+        if environment:
+            return environment.get_color(ray_dir)
+        return Vector3D(0, 0, 0)  # Couleur de fond noire
 
+    # Point d'intersection
     hit_point = ray_origin + ray_dir * nearest_t
-    normal = (
-        (hit_point - nearest_obj.center).norm()
-        if isinstance(nearest_obj, Sphere)
-        else nearest_obj.normal
-    )
+    normal = (hit_point - nearest_obj.center).norm()
     color = nearest_obj.get_surface_color(hit_point)
 
     # Calculate direct lighting (diffuse shading)
@@ -72,18 +74,26 @@ def trace(
 
         reflected_origin = hit_point + normal * 1e-4
         reflection_color = trace(
-            reflected_origin, reflected_dir, scene, lights, depth + 1, max_depth
+            reflected_origin,
+            reflected_dir,
+            scene,
+            lights,
+            depth + 1,
+            max_depth,
+            environment,
         )
         reflection_contribution = reflection_color * nearest_obj.reflection
 
-    ambient_light = Vector3D(0.1, 0.1, 0.1)
-    color = color * (light_contribution + ambient_light)
-
+    # Combiner les contributions
     return color * light_contribution + reflection_contribution
 
 
-def render_ray_tracer(
-    scene: list[Sphere], lights: list[Light], width: int, height: int
+def render(
+    scene: list[Sphere],
+    lights: list[Light],
+    width: int,
+    height: int,
+    environment: HDRIEnvironment | None = None,
 ) -> np.ndarray:
     """
     Renders the scene to create an image.
@@ -110,13 +120,13 @@ def render_ray_tracer(
         for j, x in enumerate(np.linspace(screen[0], screen[2], width)):
             pixel = Vector3D(x, y, 0)
             ray_dir = (pixel - camera).norm()
-            color = trace(camera, ray_dir, scene, lights)
+            color = trace(camera, ray_dir, scene, lights, environment=environment)
             image[i, j] = np.clip(color.components(), 0, 1)
 
     return image
 
 
-def render(
+def render_monte_carlo(
     scene: list[Sphere],
     lights: list[Light],
     width: int,
