@@ -1,27 +1,30 @@
 import numpy as np
 
+from ray_tracer.objects import Light, Sphere
 from ray_tracer.vectors import Vector3D
-from ray_tracer.objects import Sphere, Light
 
 
 def trace(
-    ray_origin: Vector3D, ray_dir: Vector3D, scene: list[Sphere], lights: list[Light]
+    ray_origin: Vector3D,
+    ray_dir: Vector3D,
+    scene: list[Sphere],
+    lights: list[Light],
+    depth: int = 0,
+    max_depth: int = 3,
 ) -> Vector3D:
     """
-    Traces a ray through the scene to determine the color at a given point.
+    Traces a ray through the scene to determine the color at a given point, including reflections.
 
     Args:
         ray_origin (Vector3D): The origin of the ray.
         ray_dir (Vector3D): The direction of the ray.
         scene (list): A list of objects in the scene.
         lights (list): A list of light sources in the scene.
+        depth (int): Current recursion depth for reflections.
+        max_depth (int): Maximum recursion depth for reflections.
 
     Returns:
         Vector3D: The color determined by tracing the ray.
-
-    This function finds the closest object that the ray intersects. It calculates where the ray hits the object, then determines
-    the color at that point based on the object's properties and the lighting conditions. It also checks for shadows by sending
-    rays toward each light source to see if they are blocked.
     """
     nearest_t, nearest_obj = float("inf"), None
     for obj in scene:
@@ -40,6 +43,7 @@ def trace(
     )
     color = nearest_obj.get_surface_color(hit_point)
 
+    # Calculate direct lighting (diffuse shading)
     light_contribution = Vector3D(0, 0, 0)
     for light in lights:
         light_dir = (light.position - hit_point).norm()
@@ -53,7 +57,23 @@ def trace(
             intensity = max(normal.dot(light_dir), 0)
             light_contribution += light.intensity * intensity
 
-    return color * light_contribution
+    # Reflection
+    reflection_contribution = Vector3D(0, 0, 0)
+    if (
+        depth < max_depth
+        and hasattr(nearest_obj, "reflection")
+        and nearest_obj.reflection > 0
+    ):
+        reflected_dir = (ray_dir - normal * (2 * normal.dot(ray_dir))).norm()
+
+        reflected_origin = hit_point + normal * 1e-4
+        reflection_color = trace(
+            reflected_origin, reflected_dir, scene, lights, depth + 1, max_depth
+        )
+        reflection_contribution = reflection_color * nearest_obj.reflection
+
+    # Combine diffuse and reflection contributions
+    return color * light_contribution + reflection_contribution
 
 
 def render(
