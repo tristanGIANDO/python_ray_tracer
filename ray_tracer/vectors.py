@@ -98,3 +98,26 @@ class Vector3D:
         This method is used to easily extract all three components of the vector for further calculations or storage.
         """
         return self.x, self.y, self.z
+
+    def perturb(self, roughness: float) -> "Vector3D":
+        """
+        Perturbe ce vecteur en fonction de la roughness.
+
+        Args:
+            roughness (float): Un facteur de rugosité entre 0 et 1 (0 = lisse, 1 = très rugueux).
+
+        Returns:
+            Vector3D: Un vecteur perturbé pour simuler la rugosité.
+
+        Cette méthode génère un petit vecteur aléatoire, proportionnel à la roughness,
+        et l'ajoute au vecteur actuel avant de normaliser le résultat.
+        """
+        random_perturbation = (
+            Vector3D(
+                np.random.uniform(-1, 1),
+                np.random.uniform(-1, 1),
+                np.random.uniform(-1, 1),
+            ).norm()
+            * roughness
+        )
+        return (self + random_perturbation).norm()

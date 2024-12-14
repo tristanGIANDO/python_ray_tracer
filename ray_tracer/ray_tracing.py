@@ -66,13 +66,16 @@ def trace(
     ):
         reflected_dir = (ray_dir - normal * (2 * normal.dot(ray_dir))).norm()
 
+        # Ajout de roughness
+        if hasattr(nearest_obj, "roughness") and nearest_obj.roughness > 0:
+            reflected_dir = reflected_dir.perturb(nearest_obj.roughness)
+
         reflected_origin = hit_point + normal * 1e-4
         reflection_color = trace(
             reflected_origin, reflected_dir, scene, lights, depth + 1, max_depth
         )
         reflection_contribution = reflection_color * nearest_obj.reflection
 
-    # Combine diffuse and reflection contributions
     return color * light_contribution + reflection_contribution
 
 

@@ -1,7 +1,7 @@
 import numpy as np
 
-from ray_tracer.vectors import Vector3D
 from ray_tracer.utils import get_texture_color
+from ray_tracer.vectors import Vector3D
 
 
 class Light:
@@ -26,6 +26,7 @@ class Sphere:
         radius: Vector3D,
         color: Vector3D,
         reflection: float | None = 0.5,
+        roughness: float = 0.0,
         texture=None,
     ) -> None:
         """
@@ -45,6 +46,7 @@ class Sphere:
         self.radius = radius
         self.color = color
         self.reflection = reflection
+        self.roughness = roughness
         self.texture = texture
 
     def intersect(self, ray_origin: Vector3D, ray_dir: Vector3D) -> float | None:

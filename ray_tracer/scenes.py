@@ -1,13 +1,15 @@
-import numpy as np
-from PIL import Image
-from pathlib import Path
 import time
 import uuid
-from ray_tracer.objects import Sphere, Light
-from configs.configs import SceneConfig, RenderConfig
+from pathlib import Path
+
+import numpy as np
+from PIL import Image
+
+from configs.configs import RenderConfig, SceneConfig
+from evaluation.utils import create_csv_file, populate_csv_file
+from ray_tracer.objects import Light, Sphere
 from ray_tracer.ray_tracing import render
 from ray_tracer.vectors import Vector3D
-from evaluation.utils import create_csv_file, populate_csv_file
 
 
 def build_scene(config: SceneConfig) -> tuple[list[Sphere], list[Light]]:
@@ -32,6 +34,7 @@ def build_scene(config: SceneConfig) -> tuple[list[Sphere], list[Light]]:
                     radius=settings["radius"],
                     color=Vector3D(*settings["color"]),
                     reflection=settings["reflection"],
+                    roughness=settings["roughness"],
                     texture=texture,
                 )
             )
