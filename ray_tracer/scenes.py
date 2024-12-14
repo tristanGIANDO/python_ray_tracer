@@ -10,6 +10,7 @@ from denoiser import denoise
 from evaluation.utils import create_csv_file, populate_csv_file
 from ray_tracer.objects import Light, Sphere
 from ray_tracer.ray_tracing import render
+from ray_tracer.utils import HDRIEnvironment
 from ray_tracer.vectors import Vector3D
 
 
@@ -60,8 +61,14 @@ def batch_render(scene_content, config: RenderConfig, log_results: bool):
         if log_results:
             start_time = time.time()
 
-        image = render(objects, lights, **settings)
-        image = denoise(image)
+        environment_image = (
+            HDRIEnvironment(settings["hdri"]) if settings.get("hdri") else None
+        )
+        image = render(
+            objects, lights, settings["width"], settings["height"], environment_image
+        )
+        if settings.get("denoise", False):
+            image = denoise(image)
         timestamp = int(time.time())
         unique_id = f"{timestamp}-{uuid.uuid4()}"
         output_file = Path("data") / f"{unique_id}.png"
