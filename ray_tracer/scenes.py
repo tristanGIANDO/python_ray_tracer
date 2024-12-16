@@ -71,6 +71,7 @@ def render_single_image(scene_content, render_config: RenderConfig, log_results:
             render_config.width,
             render_config.height,
             environment_image,
+            render_config.max_samples,
         )
 
         if log_results:

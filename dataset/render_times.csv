@@ -1,2 +1,5 @@
 image_name,width,height,hdri,render_algorithm,max_samples,max_specular_depth,denoise,output_path,render_time,denoise_time,path
-output,100,100,sourceimages/hdri_2.jpg,monte_carlo,1,1,False,data\output.png,7.179099082946777,0,data\output.png
+output_1,500,500,sourceimages/hdri_2.jpg,monte_carlo,1,1,False,data\output_1.png,20.926435470581055,0,data\output_1.png
+output_5,500,500,sourceimages/hdri_2.jpg,monte_carlo,5,1,False,data\output_5.png,83.68130016326904,0,data\output_5.png
+output_10,500,500,sourceimages/hdri_2.jpg,monte_carlo,10,1,False,data\output_50.png,155.42611360549927,0,data\output_10.png
+output_50,500,500,sourceimages/hdri_2.jpg,monte_carlo,50,1,False,data\output_50.png,774.5271372795105,0,data\output_50.png
