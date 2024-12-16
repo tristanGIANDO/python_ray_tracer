@@ -131,7 +131,8 @@ def render_monte_carlo(
     lights: list[Light],
     width: int,
     height: int,
-    samples_per_pixel: int = 1,  # Nombre de rayons par pixel
+    environment: HDRIEnvironment | None = None,
+    samples_per_pixel: int = 10,
 ) -> np.ndarray:
     aspect_ratio = float(width) / height
     camera = Vector3D(0, 0, -10)
@@ -147,7 +148,9 @@ def render_monte_carlo(
                 v = np.random.uniform(-1 / height, 1 / height)
                 pixel = Vector3D(x + u, y + v, 0)
                 ray_dir = (pixel - camera).norm()
-                pixel_color += trace(camera, ray_dir, scene, lights)
+                pixel_color += trace(
+                    camera, ray_dir, scene, lights, environment=environment
+                )
             image[i, j] = np.clip((pixel_color / samples_per_pixel).components(), 0, 1)
 
     return image
