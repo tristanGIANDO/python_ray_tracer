@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Dashboard</title>
+    <style>
+        body { margin: 0; font-family: Arial, sans-serif; }
+        #dashboard { display: flex; height: 100vh; position: relative; }
+        #viewport3D { flex: 2; background: #222; }
+        #renderOutput { flex: 1; padding: 10px; text-align: center; background: #f4f4f4; }
+        #renderOutput img { width: 100%; border: 1px solid #ccc; }
+        #controls { position: absolute; top: 10px; left: 10px; z-index: 10; }
+        button { padding: 8px 16px; font-size: 16px; margin: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div id="dashboard">
+        <div id="viewport3D"></div>
+        <div id="renderOutput">
+            <h3>Rendu Ray Tracing</h3>
+            <img src="data/dernier_rendu.png" alt="Rendu 3D">
+        </div>
+    </div>
+    <div id="controls">
+        <button id="addSphereBtn">Ajouter une Sphère</button>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Initialisation de la scène
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth * 0.65 / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth * 0.65, window.innerHeight);
+        document.getElementById('viewport3D').appendChild(renderer.domElement);
+
+        // Lumières
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(5, 10, 5);
+        scene.add(light);
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+        scene.add(ambientLight);
+
+        // Caméra et contrôles
+        camera.position.set(0, 2, 5);
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+
+        // Fonction pour ajouter une sphère
+        const addSphere = () => {
+            const geometry = new THREE.SphereGeometry(0.5, 32, 32); // Sphère de rayon 0.5
+            const material = new THREE.MeshStandardMaterial({ 
+                color: new THREE.Color(Math.random(), Math.random(), Math.random()) // Couleur aléatoire
+            });
+            const sphere = new THREE.Mesh(geometry, material);
+
+            // Position aléatoire
+            sphere.position.set(
+                (Math.random() - 0.5) * 5, // X entre -2.5 et 2.5
+                Math.random() * 3,        // Y entre 0 et 3
+                (Math.random() - 0.5) * 5 // Z entre -2.5 et 2.5
+            );
+
+            scene.add(sphere);
+        };
+
+        // Bouton pour ajouter une sphère
+        document.getElementById('addSphereBtn').addEventListener('click', addSphere);
+
+        // Animation
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
+</body>
+</html>
