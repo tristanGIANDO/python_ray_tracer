@@ -2,6 +2,7 @@ import time
 from dataclasses import asdict
 from pathlib import Path
 
+import matplotlib.pyplot as plt
 import numpy as np
 from PIL import Image
 
@@ -9,7 +10,7 @@ from configs.configs import RenderConfig, SceneConfig
 from denoiser import denoise
 from evaluation.utils import create_csv_file, populate_csv_file
 from ray_tracer.objects import Light, Sphere
-from ray_tracer.ray_tracing import render_monte_carlo
+from ray_tracer.ray_tracing import render_monte_carlo_live
 from ray_tracer.utils import HDRIEnvironment
 from ray_tracer.vectors import Vector3D
 
@@ -65,14 +66,18 @@ def render_single_image(scene_content, render_config: RenderConfig, log_results:
     )
 
     if render_config.render_algorithm == "monte_carlo":
-        image = render_monte_carlo(
+        for partial_image in render_monte_carlo_live(
             objects,
             lights,
             render_config.width,
             render_config.height,
             environment_image,
             render_config.max_samples,
-        )
+        ):
+            plt.imshow(partial_image)
+            plt.pause(0.01)
+
+        image = partial_image
 
         if log_results:
             render_elapsed_time = time.time() - start_time
