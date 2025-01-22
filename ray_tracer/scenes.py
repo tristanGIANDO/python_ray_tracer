@@ -4,9 +4,10 @@ from pathlib import Path
 
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 from PIL import Image
 
-from configs.configs import RenderConfig, SceneConfig
+from configs.configs import RenderConfig
 from denoiser import denoise
 from evaluation.utils import create_csv_file, populate_csv_file
 from ray_tracer.objects import Light, Sphere
@@ -15,34 +16,38 @@ from ray_tracer.utils import HDRIEnvironment
 from ray_tracer.vectors import Vector3D
 
 
-def build_scene(render_config: SceneConfig) -> tuple[list[Sphere], list[Light]]:
-    objects = []
+def load_scene(scene_csv_file: str) -> tuple[list[Sphere], list[Light]]:
+    df = pd.read_csv(scene_csv_file)
+
+    spheres = []
     lights = []
 
-    for settings in render_config.data.values():
-        if settings["type"] == "Light":
-            lights.append(
-                Light(Vector3D(*settings["position"]), Vector3D(*settings["intensity"]))
-            )
+    for _, row in df.iterrows():
+        if row["type"] == "Sphere":
+            texture = None
+            if "texture" in row and not pd.isna(row["texture"]):
+                texture = np.array(Image.open(row["texture"]))
 
-        elif settings["type"] == "Sphere":
-            texture = (
-                np.array(Image.open(settings["texture"]))
-                if "texture" in settings
-                else None
+            sphere = Sphere(
+                center=Vector3D(row["positionX"], row["positionY"], row["positionZ"]),
+                radius=row["radius"],
+                color=Vector3D(row["colorR"], row["colorG"], row["colorB"]),
+                reflection=row["reflection"],
+                roughness=row["roughness"],
+                texture=texture,
             )
-            objects.append(
-                Sphere(
-                    center=Vector3D(*settings["center"]),
-                    radius=settings["radius"],
-                    color=Vector3D(*settings["color"]),
-                    reflection=settings["reflection"],
-                    roughness=settings["roughness"],
-                    texture=texture,
-                )
-            )
+            spheres.append(sphere)
 
-    return objects, lights
+        elif row["type"] == "Light":
+            light = Light(
+                position=Vector3D(row["positionX"], row["positionY"], row["positionZ"]),
+                intensity=Vector3D(
+                    row["intensityR"], row["intensityG"], row["intensityB"]
+                ),
+            )
+            lights.append(light)
+
+    return spheres, lights
 
 
 def render_single_image(scene_content, render_config: RenderConfig, log_results: bool):

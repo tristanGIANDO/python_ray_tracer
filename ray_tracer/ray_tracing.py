@@ -1,3 +1,5 @@
+from concurrent.futures import ProcessPoolExecutor
+
 import numpy as np
 
 from ray_tracer.objects import Light, Sphere
@@ -155,11 +157,6 @@ def render_monte_carlo_live(
         # Mettre à jour l'image avec les moyennes actuelles
         image = np.clip(accumulated_color / sample, 0, 1)
         yield image
-
-
-from concurrent.futures import ProcessPoolExecutor
-
-import numpy as np
 
 
 def render_pixel(
