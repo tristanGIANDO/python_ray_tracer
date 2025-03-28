@@ -5,21 +5,6 @@ from typing import Any, Generator
 from ray_tracer.domain import RenderConfig, Scene, Vector3D
 
 
-class Pipeline(ABC):
-    @abstractmethod
-    def run(self, scene: Scene, render_config: RenderConfig) -> str:
-        ray_tracer = RayTracer()
-
-        image = ray_tracer.render(
-            scene, render_config
-        )  # it's a yield, you could show each step
-
-        image_sized = ray_tracer.to_standard_size(image)
-
-        image_service = ImageService()
-        image_service.to_bitmap(image_sized, render_config.output_path)
-
-
 class ImageService(ABC):
     @abstractmethod
     def from_path(image_path: Path) -> Any:
@@ -163,3 +148,18 @@ class VectorService(ABC):
             Vector3D: Vecteur perturbé en fonction de la rugosité.
         """
         pass
+
+
+def render_single_image_pipeline(
+    scene: Scene,
+    render_config: RenderConfig,
+    ray_tracer: RayTracer,
+    image_service: ImageService,
+) -> bool:
+    image = ray_tracer.render(
+        scene, render_config
+    )  # it's a yield, you could show each step
+    image_sized = ray_tracer.to_standard_size(image)
+    image_service.to_bitmap(image_sized, render_config.output_path)
+
+    return render_config.output_path.exists()

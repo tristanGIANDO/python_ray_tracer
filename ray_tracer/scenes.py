@@ -14,38 +14,36 @@ from ray_tracer.domain import Light, Sphere
 from ray_tracer.ray_tracing import render_monte_carlo_live
 from ray_tracer.utils import HDRIEnvironment
 from ray_tracer.domain.vectors import Vector3D
+import csv
 
 
 def load_scene(scene_csv_file: str) -> tuple[list[Sphere], list[Light]]:
-    df = pd.read_csv(scene_csv_file)
+    data = pd.read_csv(scene_csv_file)
 
-    spheres = []
-    lights = []
+    spheres_data = data[data["type"] == "Sphere"]
+    lights_data = data[data["type"] == "Light"]
 
-    for _, row in df.iterrows():
-        if row["type"] == "Sphere":
-            texture = None
-            if "texture" in row and not pd.isna(row["texture"]):
-                texture = np.array(Image.open(row["texture"]))
+    spheres = [
+        Sphere(
+            center=Vector3D(row["positionX"], row["positionY"], row["positionZ"]),
+            radius=row["radius"],
+            color=Vector3D(row["colorR"], row["colorG"], row["colorB"]),
+            reflection=row["reflection"],
+            roughness=row["roughness"],
+            texture=np.array(Image.open(row["texture"]))
+            if pd.notna(row["texture"])
+            else None,
+        )
+        for _, row in spheres_data.iterrows()
+    ]
 
-            sphere = Sphere(
-                center=Vector3D(row["positionX"], row["positionY"], row["positionZ"]),
-                radius=row["radius"],
-                color=Vector3D(row["colorR"], row["colorG"], row["colorB"]),
-                reflection=row["reflection"],
-                roughness=row["roughness"],
-                texture=texture,
-            )
-            spheres.append(sphere)
-
-        elif row["type"] == "Light":
-            light = Light(
-                position=Vector3D(row["positionX"], row["positionY"], row["positionZ"]),
-                intensity=Vector3D(
-                    row["intensityR"], row["intensityG"], row["intensityB"]
-                ),
-            )
-            lights.append(light)
+    lights = [
+        Light(
+            position=Vector3D(row["positionX"], row["positionY"], row["positionZ"]),
+            intensity=Vector3D(row["intensityR"], row["intensityG"], row["intensityB"]),
+        )
+        for _, row in lights_data.iterrows()
+    ]
 
     return spheres, lights
 

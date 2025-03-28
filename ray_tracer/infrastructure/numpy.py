@@ -247,6 +247,7 @@ class NumpyRayTracer(RayTracer):
         ray_origin: Vector3D,
         ray_dir: Vector3D,
         scene: list[Sphere],
+        background: Path,
         depth: int = 0,
         max_depth: int = 3,
     ) -> Vector3D:
@@ -272,8 +273,8 @@ class NumpyRayTracer(RayTracer):
 
         if nearest_obj is None:
             # Retourner la couleur de l'environnement si aucune intersection
-            if scene.background:
-                return scene.background.get_color(ray_dir)
+            if background:
+                return background.get_color(ray_dir)
             return Vector3D(0, 0, 0)  # Couleur de fond noire
 
         # Point d'intersection
@@ -331,7 +332,7 @@ class NumpyRayTracer(RayTracer):
             (render_config.image_height, render_config.image_width, 3)
         )
 
-        for sample in range(1, render_config.samples_per_pixel + 1):
+        for sample in range(1, render_config.max_samples_per_pixel + 1):
             for i, y in enumerate(
                 np.linspace(screen[1], screen[3], render_config.image_height)
             ):
@@ -347,7 +348,9 @@ class NumpyRayTracer(RayTracer):
                     )
                     pixel = Vector3D(x + u, y + v, 0)
                     ray_dir = (pixel - camera).norm()
-                    color = self._trace_ray(camera, ray_dir, scene)
+                    color = self._trace_ray(
+                        camera, ray_dir, scene, render_config.background
+                    )
                     accumulated_color[i, j] += color.components()
 
             # Mettre à jour l'image avec les moyennes actuelles

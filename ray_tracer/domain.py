@@ -80,12 +80,14 @@ class Scene(BaseModel):
 
     objects: list[Sphere]
     lights: list[Light]
-    background: Path
 
 
 @dataclass
 class RenderConfig(BaseModel):
     image_width: int
     image_height: int
-    samples_per_pixel: int
+    max_samples_per_pixel: int
+    max_specular_depth: int
+    background: Path
+    denoise: bool
     output_path: Path
