@@ -27,74 +27,24 @@ class RayTracer(ABC):
 
 class ObjectService(ABC):
     @abstractmethod
-    def intersect(self, ray_origin: Vector3D, ray_dir: Vector3D) -> float | None:
+    def intersect(
+        self,
+        object,  # TODO: type TypeVar
+        ray_origin: Vector3D,
+        ray_dir: Vector3D,
+    ) -> float | None:
         pass
 
     @abstractmethod
-    def get_surface_color(self, hit_point: Vector3D) -> Vector3D:
+    def get_surface_color(
+        self,
+        object,  # TODO: type TypeVar
+        hit_point: Vector3D,
+    ) -> Vector3D:
         pass
 
 
 class VectorService(ABC):
-    @abstractmethod
-    def add(self, vector1: Vector3D, vector2: Vector3D) -> Vector3D:
-        """
-        Adds two vectors component-wise.
-
-        Args:
-            other (Vector3D): The vector to add.
-
-        Returns:
-            Vector3D: The resulting vector after addition.
-
-        This method takes another vector and adds each component to the corresponding component of this vector.
-        """
-        pass
-
-    @abstractmethod
-    def sub(self, vector1: Vector3D, vector2: Vector3D) -> Vector3D:
-        """
-        Subtracts one vector from another component-wise.
-
-        Args:
-            other (Vector3D): The vector to subtract.
-
-        Returns:
-            Vector3D: The resulting vector after subtraction.
-
-        This method subtracts the x, y, and z components of the other vector from this vector.
-        """
-        pass
-
-    @abstractmethod
-    def mul(self, vector: Vector3D, scalar: float | Vector3D) -> Vector3D:
-        """
-        Multiplies the vector by a scalar or another vector component-wise.
-
-        Args:
-            scalar (float or Vector3D): The scalar or vector to multiply.
-
-        Returns:
-            Vector3D: The resulting vector after multiplication.
-
-        If `scalar` is a float, each component of the vector is multiplied by this value.
-        If `scalar` is another vector, each component is multiplied by the corresponding component of that vector.
-        """
-        pass
-
-    @abstractmethod
-    def truediv(self, vector: Vector3D, scalar: float) -> Vector3D:
-        """
-        Divise le vecteur par un scalaire.
-
-        Args:
-            scalar (float): Le scalaire par lequel diviser.
-
-        Returns:
-            Vector3D: Un nouveau vecteur avec chaque composant divisé par le scalaire.
-        """
-        pass
-
     @abstractmethod
     def dot(self, vector1: Vector3D, vector2: Vector3D) -> float:
         """
@@ -112,7 +62,7 @@ class VectorService(ABC):
         pass
 
     @abstractmethod
-    def norm(self, vector: Vector3D) -> float:
+    def normalize(self, vector: Vector3D) -> float:
         """
         Normalizes the vector (scales it to have length 1).
 
@@ -159,6 +109,7 @@ def render_single_image_pipeline(
     image = ray_tracer.render(
         scene, render_config
     )  # it's a yield, you could show each step
+    image = next(image)
     image_sized = ray_tracer.to_standard_size(image)
     image_service.to_bitmap(image_sized, render_config.output_path)
 

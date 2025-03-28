@@ -7,7 +7,7 @@ from ray_tracer.services import ImageService
 
 
 class PillowImageService(ImageService):
-    def from_path(image_path: Path) -> Image:
+    def from_path(self, image_path: Path) -> Image:
         return Image.open(image_path)
 
     def to_bitmap(self, image: Any, output_path: Path) -> None:

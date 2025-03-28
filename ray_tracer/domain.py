@@ -1,11 +1,10 @@
 from dataclasses import dataclass
 from pathlib import Path
-
-from pydantic import BaseModel
+from typing import Self
 
 
 @dataclass
-class Vector3D(BaseModel):
+class Vector3D:
     """
     Initializes a 3D vector.
 
@@ -21,9 +20,26 @@ class Vector3D(BaseModel):
     y: float
     z: float
 
+    def __add__(self, other: Self) -> Self:
+        return Vector3D(self.x + other.x, self.y + other.y, self.z + other.z)
+
+    def __sub__(self, other: Self) -> Self:
+        return Vector3D(self.x - other.x, self.y - other.y, self.z - other.z)
+
+    def __mul__(self, other: float | Self) -> Self:
+        if isinstance(other, int | float):
+            return Vector3D(self.x * other, self.y * other, self.z * other)
+        else:
+            return Vector3D(self.x * other.x, self.y * other.y, self.z * other.z)
+
+    def __truediv__(self, other: float) -> Self:
+        if other == 0:
+            raise ZeroDivisionError("Cannot divide by zero.")
+        return Vector3D(self.x / other, self.y / other, self.z / other)
+
 
 @dataclass
-class Light(BaseModel):
+class Light:
     """
     Initializes a light source.
 
@@ -34,12 +50,12 @@ class Light(BaseModel):
     The position determines where the light is located in the scene, and the intensity determines how bright the light is and its color.
     """
 
-    position: Vector3D
-    intensity: Vector3D
+    centerXYZ: Vector3D
+    intensityRGB: Vector3D
 
 
 @dataclass
-class Sphere(BaseModel):
+class Sphere:
     """
     Initializes a sphere object.
 
@@ -54,9 +70,9 @@ class Sphere(BaseModel):
     allows the sphere to have more complex surface details.
     """
 
-    center: Vector3D
+    centerXYZ: Vector3D
     radius: float
-    color: Vector3D
+    colorRGB: Vector3D
     reflection: float | None
     roughness: float
     texture: str | None  # image ?
@@ -66,7 +82,7 @@ HDRI = Path
 
 
 @dataclass
-class Scene(BaseModel):
+class Scene:
     """
     Initializes a scene with objects and lights.
 
@@ -83,7 +99,7 @@ class Scene(BaseModel):
 
 
 @dataclass
-class RenderConfig(BaseModel):
+class RenderConfig:
     image_width: int
     image_height: int
     max_samples_per_pixel: int

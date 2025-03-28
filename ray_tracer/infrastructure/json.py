@@ -1,20 +1,23 @@
 import json
 from pathlib import Path
 
-from ray_tracer.domain import Light, RenderConfig, Scene, Sphere
+from ray_tracer.domain import Light, RenderConfig, Scene, Sphere, Vector3D
 
 
 def scene_from_json(file_path: Path) -> Scene:
-    object_data = json.load(file_path.open())
+    # open json file and load data
+    with open(file_path, encoding="utf-8") as file:
+        data = json.load(file)
+
     objects = []
     lights = []
-    for object in object_data:
+    for object in data:
         if object["type"] == "Sphere":
             objects.append(
                 Sphere(
-                    object["center"],
+                    Vector3D(*object["centerXYZ"]),
                     object["radius"],
-                    object["color"],
+                    Vector3D(*object["colorRGB"]),
                     object["reflection"],
                     object["roughness"],
                     object["texture"],
@@ -23,8 +26,8 @@ def scene_from_json(file_path: Path) -> Scene:
         elif object["type"] == "Light":
             lights.append(
                 Light(
-                    object["position"],
-                    object["intensity"],
+                    Vector3D(*object["centerXYZ"]),
+                    Vector3D(*object["intensityRGB"]),
                 )
             )
 
@@ -33,4 +36,7 @@ def scene_from_json(file_path: Path) -> Scene:
 
 def render_config_from_json(file_path: Path) -> RenderConfig:
     data = json.load(file_path.open())
+    data["output_path"] = Path(data["output_path"])
+    data["background"] = Path(data["background"])
+
     return RenderConfig(**data)
