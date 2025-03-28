@@ -1,7 +1,7 @@
 {
-    "image_width": 80,
-    "image_height": 80,
-    "max_samples_per_pixel": 10,
+    "image_width": 30,
+    "image_height": 30,
+    "max_samples_per_pixel": 1,
     "max_specular_depth": 1,
     "background": "sourceimages/hdri_1.jpg",
     "denoise": false,

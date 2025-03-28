@@ -78,15 +78,13 @@ class NumpySphereService(ObjectService):
         If the sphere has a texture, this method calculates texture coordinates (u, v) based on the position of the hit point.
         It then uses these coordinates to look up the color from the texture image. If no texture is present, it returns the base color.
         """
-        try:
-            if object.texture.any():
-                normal = (hit_point - object.centerXYZ).norm()
-                u = 0.5 + np.arctan2(normal.z, normal.x) / (2 * np.pi)
-                v = 0.5 - np.arcsin(normal.y) / np.pi
-                return get_texture_color(np.array(object.texture), u, v)
+        if object.texture:
+            normal = (hit_point - object.centerXYZ).norm()
+            u = 0.5 + np.arctan2(normal.z, normal.x) / (2 * np.pi)
+            v = 0.5 - np.arcsin(normal.y) / np.pi
+            return get_texture_color(np.array(object.texture), u, v)
 
-        except AttributeError:
-            return object.colorRGB
+        return object.colorRGB
 
 
 class NumpyVectorService(VectorService):
@@ -184,6 +182,51 @@ class NumpyRayTracer(RayTracer):
         self.sphere_service = NumpySphereService()  # TODO: remove this
         self.image_service = image_service
 
+    def calculate_direct_lighting(
+        self, scene: Scene, hit_point: Vector3D, normal: Vector3D, nearest_obj: Sphere
+    ) -> Vector3D:
+        light_contribution = Vector3D(0, 0, 0)
+        for light in scene.lights:
+            light_dir = self.vector_service.normalize(light.centerXYZ - hit_point)
+            shadow_ray_origin = hit_point + normal * 1e-4
+            shadow_intersect = any(
+                self.sphere_service.intersect(obj, shadow_ray_origin, light_dir)
+                for obj in scene.objects
+                if obj != nearest_obj
+            )
+            if not shadow_intersect:
+                intensityRGB = max(self.vector_service.dot(normal, light_dir), 0)
+                light_contribution += light.intensityRGB * intensityRGB
+
+        return light_contribution
+
+    def calculate_reflection(
+        self, ray_dir, hit_point, normal, nearest_obj, scene, depth, max_depth
+    ) -> Vector3D:
+        reflection_contribution = Vector3D(0, 0, 0)
+        if (
+            depth < max_depth
+            and hasattr(nearest_obj, "reflection")
+            and nearest_obj.reflection > 0
+        ):
+            reflected_dir = self.vector_service.normalize(
+                ray_dir - normal * (2 * self.vector_service.dot(normal, ray_dir))
+            )
+
+            # Appliquer la roughness si elle est définie
+            if hasattr(nearest_obj, "roughness") and nearest_obj.roughness > 0:
+                reflected_dir = self.vector_service.perturb(
+                    reflected_dir, nearest_obj.roughness
+                )
+
+            reflected_origin = hit_point + normal * 1e-4
+            reflection_color = self._trace_ray(
+                reflected_origin, reflected_dir, scene, depth + 1, max_depth
+            )
+            reflection_contribution = reflection_color * nearest_obj.reflection
+
+        return reflection_contribution
+
     def _trace_ray(
         self,
         ray_origin: Vector3D,
@@ -224,44 +267,14 @@ class NumpyRayTracer(RayTracer):
         normal = self.vector_service.normalize(hit_point - nearest_obj.centerXYZ)
         color = self.sphere_service.get_surface_color(nearest_obj, hit_point)
 
-        # Calculate direct lighting (diffuse shading)
-        light_contribution = Vector3D(0, 0, 0)
-        for light in scene.lights:
-            light_dir = self.vector_service.normalize(light.centerXYZ - hit_point)
-            shadow_ray_origin = hit_point + normal * 1e-4
-            shadow_intersect = any(
-                self.sphere_service.intersect(obj, shadow_ray_origin, light_dir)
-                for obj in scene.objects
-                if obj != nearest_obj
-            )
-            if not shadow_intersect:
-                intensityRGB = max(self.vector_service.dot(normal, light_dir), 0)
-                light_contribution += light.intensityRGB * intensityRGB
+        light_contribution = self.calculate_direct_lighting(
+            scene, hit_point, normal, nearest_obj
+        )
 
-        # Reflection
-        reflection_contribution = Vector3D(0, 0, 0)
-        if (
-            depth < max_depth
-            and hasattr(nearest_obj, "reflection")
-            and nearest_obj.reflection > 0
-        ):
-            reflected_dir = self.vector_service.normalize(
-                ray_dir - normal * (2 * self.vector_service.dot(normal, ray_dir))
-            )
+        reflection_contribution = self.calculate_reflection(
+            ray_dir, hit_point, normal, nearest_obj, scene, depth, max_depth
+        )
 
-            # Appliquer la roughness si elle est définie
-            if hasattr(nearest_obj, "roughness") and nearest_obj.roughness > 0:
-                reflected_dir = self.vector_service.perturb(
-                    reflected_dir, nearest_obj.roughness
-                )
-
-            reflected_origin = hit_point + normal * 1e-4
-            reflection_color = self._trace_ray(
-                reflected_origin, reflected_dir, scene, depth + 1, max_depth
-            )
-            reflection_contribution = reflection_color * nearest_obj.reflection
-
-        # Combiner les contributions
         return color * light_contribution + reflection_contribution
 
     def render(
@@ -273,7 +286,9 @@ class NumpyRayTracer(RayTracer):
         camera = Vector3D(0, 0, -1)
         screen = (-1, 1 / aspect_ratio, 1, -1 / aspect_ratio)
 
-        image = np.zeros((render_config.image_height, render_config.image_width, 3))
+        image = np.zeros(
+            (render_config.image_height, render_config.image_width, 3)
+        )  # black image
         accumulated_color = np.zeros(
             (render_config.image_height, render_config.image_width, 3)
         )
@@ -292,6 +307,7 @@ class NumpyRayTracer(RayTracer):
                     v = np.random.uniform(
                         -1 / render_config.image_height, 1 / render_config.image_height
                     )
+
                     pixel = Vector3D(x + u, y + v, 0)
                     ray_dir = self.vector_service.normalize((pixel - camera))
                     color = self._trace_ray(

@@ -1,25 +1,16 @@
 [
     {
         "type":"Sphere",
-        "centerXYZ":[0.0, 0.0, 6.689],
-        "radius":5.0,
+        "centerXYZ":[0.0, 0.0, 6],
+        "radius":4.0,
         "colorRGB":[0.5, 0.5, 0.5],
         "reflection":1.0,
         "roughness":0.5,
-        "texture":"../textures/earth.jpg"
-    },
-    {
-        "type":"Sphere",
-        "centerXYZ":[1.0, -1.0, 6.689],
-        "radius":0.5,
-        "colorRGB":[0.5, 0.5, 0.5],
-        "reflection":1.0,
-        "roughness":0.5,
-        "texture":"../textures/mars.jpg"
+        "texture":""
     },
     {
         "type":"Light",
-        "centerXYZ":[4.0, 4.0, 6.689],
+        "centerXYZ":[0.0, 6.0, 6.689],
         "intensityRGB":[1.0,1.0,1.0]
     }
 ]
