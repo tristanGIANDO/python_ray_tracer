@@ -3,7 +3,7 @@ from typing import Any
 
 from PIL import Image
 
-from ray_tracer.services import ImageService
+from old_ray_tracer.services import ImageService
 
 
 class PillowImageService(ImageService):

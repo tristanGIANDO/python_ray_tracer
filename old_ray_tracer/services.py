@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, Generator
 
-from ray_tracer.domain import RenderConfig, Scene, Vector3D
+from old_ray_tracer.domain import RenderConfig, Scene, Vector3D
 
 
 class ImageService(ABC):

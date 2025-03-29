@@ -3,8 +3,13 @@ from typing import Generator
 
 import numpy as np
 
-from ray_tracer.domain import RenderConfig, Scene, Sphere, Vector3D
-from ray_tracer.services import ImageService, ObjectService, RayTracer, VectorService
+from old_ray_tracer.domain import RenderConfig, Scene, Sphere, Vector3D
+from old_ray_tracer.services import (
+    ImageService,
+    ObjectService,
+    RayTracer,
+    VectorService,
+)
 
 
 def get_texture_color(texture: np.ndarray, u: float, v: float) -> Vector3D:

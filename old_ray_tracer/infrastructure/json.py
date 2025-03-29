@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from ray_tracer.domain import Light, RenderConfig, Scene, Sphere, Vector3D
+from old_ray_tracer.domain import Light, RenderConfig, Scene, Sphere, Vector3D
 
 
 def scene_from_json(file_path: Path) -> Scene:

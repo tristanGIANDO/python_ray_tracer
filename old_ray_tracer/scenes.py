@@ -10,10 +10,10 @@ from PIL import Image
 from configs.configs import RenderConfig
 from denoiser import denoise
 from evaluation.utils import create_csv_file, populate_csv_file
-from ray_tracer.domain import Light, Sphere
-from ray_tracer.ray_tracing import render_monte_carlo_live
-from ray_tracer.utils import HDRIEnvironment
-from ray_tracer.domain.vectors import Vector3D
+from old_ray_tracer.domain import Light, Sphere
+from old_ray_tracer.ray_tracing import render_monte_carlo_live
+from old_ray_tracer.utils import HDRIEnvironment
+from old_ray_tracer.domain.vectors import Vector3D
 import csv
 
 

@@ -1,10 +1,10 @@
 import time
 from pathlib import Path
 
-from ray_tracer.infrastructure.json import render_config_from_json, scene_from_json
-from ray_tracer.infrastructure.numpy import NumpyRayTracer
-from ray_tracer.infrastructure.pillow import PillowImageService
-from ray_tracer.services import render_single_image_pipeline
+from old_ray_tracer.infrastructure.json import render_config_from_json, scene_from_json
+from old_ray_tracer.infrastructure.numpy import NumpyRayTracer
+from old_ray_tracer.infrastructure.pillow import PillowImageService
+from old_ray_tracer.services import render_single_image_pipeline
 
 if __name__ == "__main__":
     image_service = PillowImageService()
