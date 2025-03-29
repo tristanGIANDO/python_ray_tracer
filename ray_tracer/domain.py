@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import numpy as np
 
 
-def extract(cond, x) -> numbers.Number | np.ndarray:
+def extract(cond, x) -> numbers.Number | np.ndarray:  # TODO: where to put this?
     if isinstance(x, numbers.Number):
         return x
     else:
@@ -60,7 +60,7 @@ class Camera:
 
 
 @dataclass
-class PointLight:
+class PointLight:  # TODO: add intensity
     position: Vector3D
 
 
@@ -74,12 +74,12 @@ class Shape(ABC):
         pass
 
     @abstractmethod
-    def create_shader(
+    def create_shader(  # TODO: sortir de la classe Shape
         self,
         ray_origin: Vector3D,
         normalized_ray_direction: Vector3D,
         distance_origin_to_intersection,
-        scene,
+        scene,  # TODO: move this
         ray_tracer,  # TODO: move this
         camera: Camera,
         light: PointLight,
@@ -90,11 +90,11 @@ class Shape(ABC):
 
 
 @dataclass
-class RenderImage:
+class RenderImage:  # TODO: transformer en render_config
     width: int
     height: int
 
 
 @dataclass
-class Scene3D:
+class Scene3D:  # TODO: ajouter lights
     shapes: list[Shape]
