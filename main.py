@@ -1,21 +1,86 @@
 import time
 from pathlib import Path
 
-from old_ray_tracer.infrastructure.json import render_config_from_json, scene_from_json
-from old_ray_tracer.infrastructure.numpy import NumpyRayTracer
-from old_ray_tracer.infrastructure.pillow import PillowImageService
-from old_ray_tracer.services import render_single_image_pipeline
+import numpy as np
+from PIL import Image
 
-if __name__ == "__main__":
-    image_service = PillowImageService()
+from ray_tracer.domain import (
+    Camera,
+    PointLight,
+    RenderImage,
+    RGBColor,
+    Scene3D,
+    Vector3D,
+)
+from ray_tracer.services import RayTracer
 
-    ray_tracer = NumpyRayTracer(image_service)
 
-    scene = scene_from_json(Path("tests/testdata/input_scene.json"))
-    render_config = render_config_from_json(
-        Path("tests/testdata/input_render_settings.json")
+def main(
+    render_image: RenderImage,
+    camera: Camera,
+    scene: Scene3D,
+    output_path: Path,
+    ray_tracer: RayTracer,
+    reflection_gain: float,
+    specular_gain: float,
+) -> None:
+    aspect_ratio = float(render_image.width) / render_image.height
+    projection_canva = (-1, 1 / aspect_ratio + 0.25, 1, -1 / aspect_ratio + 0.25)
+    x = np.tile(
+        np.linspace(projection_canva[0], projection_canva[2], render_image.width),
+        render_image.height,
+    )
+    y = np.repeat(
+        np.linspace(projection_canva[1], projection_canva[3], render_image.height),
+        render_image.width,
     )
 
-    start = time.time()
-    if render_single_image_pipeline(scene, render_config, ray_tracer, image_service):
-        print(f"Rendered image with success in {time.time() - start:.2f} seconds")
+    start_time = time.time()
+    ray_destinations = Vector3D(x, y, 0)
+    color = ray_tracer.render(
+        camera,
+        light,
+        camera.position,
+        (ray_destinations - camera.position).norm(),
+        scene,
+        reflection_gain,
+        specular_gain,
+    )
+    print("Took", time.time() - start_time)
+
+    rgb_colors = [
+        Image.fromarray(
+            (
+                255
+                * np.clip(grey_color, 0, 1).reshape(
+                    (render_image.height, render_image.width)
+                )
+            ).astype(np.uint8),
+            "L",
+        )
+        for grey_color in color.components()
+    ]
+    Image.merge("RGB", rgb_colors).save(output_path)
+
+
+if __name__ == "__main__":
+    from ray_tracer.infra_numpy import CheckeredSphere, NumpyRayTracer, NumpySphere
+
+    light = PointLight(Vector3D(5, 10, -10))
+    camera = Camera(Vector3D(0, 0.35, -2))
+    render_image = RenderImage(4000, 3000)
+    ray_tracer = NumpyRayTracer()
+
+    scene = Scene3D(
+        [
+            NumpySphere(Vector3D(0.55, 0.5, 3), 1.0, RGBColor(0, 1, 1)),
+            NumpySphere(Vector3D(-0.45, 0.1, 1), 0.4, RGBColor(0.5, 0.5, 0.5)),
+            CheckeredSphere(
+                Vector3D(0, -99999.5, 0), 99999, RGBColor(0.18, 0.18, 0.18), 1.0
+            ),
+        ]
+    )
+
+    output_path = Path("render.png")
+
+    main(render_image, camera, scene, output_path, ray_tracer, 0.5, 1.0)
