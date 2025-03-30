@@ -1,19 +1,71 @@
+import numbers
 from functools import reduce
 
 import numpy as np
 
+from ray_tracer.application import RenderService, Shader
 from ray_tracer.domain import (
     Camera,
     PointLight,
-    RGBColor,
+    RenderImage,
     Scene3D,
     Shape,
     Vector3D,
-    extract,
 )
-from ray_tracer.services import RayTracer, Shader
 
 FARAWAY = 1.0e39
+
+
+def extract(cond, x):
+    if isinstance(x, numbers.Number):
+        return x
+    else:
+        return np.extract(cond, x)
+
+
+class NumpyVector3D(Vector3D):
+    def __init__(self, x: int | float, y: int | float, z: int | float) -> None:
+        (self.x, self.y, self.z) = (x, y, z)
+
+    def dot(self, other: "NumpyVector3D") -> float:
+        return (self.x * other.x) + (self.y * other.y) + (self.z * other.z)
+
+    def __abs__(self) -> float:
+        return self.dot(self)
+
+    def components(self) -> tuple[float, float, float]:
+        return (self.x, self.y, self.z)
+
+    def __mul__(self, other: int | float) -> "NumpyVector3D":
+        return NumpyVector3D(self.x * other, self.y * other, self.z * other)
+
+    def __add__(self, other: "NumpyVector3D") -> "NumpyVector3D":
+        return NumpyVector3D(self.x + other.x, self.y + other.y, self.z + other.z)
+
+    def __sub__(self, other: "NumpyVector3D") -> "NumpyVector3D":
+        return NumpyVector3D(self.x - other.x, self.y - other.y, self.z - other.z)
+
+    def norm(self):
+        mag = np.sqrt(self.dot(self))
+        return self * (1.0 / np.where(mag == 0, 1, mag))
+
+    def extract(self, cond) -> "NumpyVector3D":
+        return NumpyVector3D(
+            extract(cond, self.x), extract(cond, self.y), extract(cond, self.z)
+        )
+
+    def place(self, cond) -> "NumpyVector3D":
+        r = NumpyVector3D(
+            np.zeros(cond.shape), np.zeros(cond.shape), np.zeros(cond.shape)
+        )
+        np.place(r.x, cond, self.x)
+        np.place(r.y, cond, self.y)
+        np.place(r.z, cond, self.z)
+        return r
+
+
+class NumpyRGBColor(NumpyVector3D):
+    pass
 
 
 class NumpyShader(Shader):
@@ -22,9 +74,9 @@ class NumpyShader(Shader):
         shape: Shape,
         light: PointLight,
         camera: Camera,
-        ray_tracer: RayTracer,
-        ray_origin: Vector3D,
-        normalized_ray_direction: Vector3D,
+        ray_tracer: RenderService,
+        ray_origin: NumpyVector3D,
+        normalized_ray_direction: NumpyVector3D,
         distance_origin_to_intersection,
         scene: Scene3D,
         reflection_gain: float,
@@ -41,7 +93,7 @@ class NumpyShader(Shader):
         self.reflection_gain = reflection_gain
         self.specular_gain = specular_gain
 
-    def create(self) -> RGBColor:
+    def create(self) -> NumpyRGBColor:
         intersection_point = (
             self.ray_origin
             + self.normalized_ray_direction * self.distance_origin_to_intersection
@@ -96,8 +148,8 @@ class NumpyShader(Shader):
         self,
         shape_index: int,
         shapes: list[Shape],
-        nudged_intersection_point: Vector3D,
-        direction_to_light: Vector3D,
+        nudged_intersection_point: NumpyVector3D,
+        direction_to_light: NumpyVector3D,
     ) -> bool:
         light_distances = [
             shape.intersect(nudged_intersection_point, direction_to_light)
@@ -109,9 +161,9 @@ class NumpyShader(Shader):
     def calculate_diffuse(
         self,
         shape: Shape,
-        intersection_point: Vector3D,
-        normal: Vector3D,
-        direction_to_light: Vector3D,
+        intersection_point: NumpyVector3D,
+        normal: NumpyVector3D,
+        direction_to_light: NumpyVector3D,
         is_in_light: bool,
     ):
         diffuse_light_intensity = np.maximum(normal.dot(direction_to_light), 0)
@@ -123,26 +175,26 @@ class NumpyShader(Shader):
 
     def calculate_reflection(
         self,
-        ray_tracer: RayTracer,
-        nudged_intersection_point: Vector3D,
-        normal: Vector3D,
-        normalized_ray_direction: Vector3D,
+        ray_tracer: RenderService,
+        nudged_intersection_point: NumpyVector3D,
+        normal: NumpyVector3D,
+        normalized_ray_direction: NumpyVector3D,
         scene: Scene3D,
         mirror: float,
         reflection_gain: float,
         specular_gain: float,
         camera: Camera,
         light: PointLight,
-    ) -> RGBColor:
-        rayD = (
+    ) -> NumpyRGBColor:
+        ray_direction = (
             normalized_ray_direction - normal * 2 * normalized_ray_direction.dot(normal)
         ).norm()
         return (
-            ray_tracer.render(
+            ray_tracer.render_scene(
                 camera,
                 light,
                 nudged_intersection_point,
-                rayD,
+                ray_direction,
                 scene,
                 reflection_gain,
                 specular_gain,
@@ -152,27 +204,33 @@ class NumpyShader(Shader):
 
     def calculate_phong_specular(
         self,
-        normal: Vector3D,
-        direction_to_light: Vector3D,
-        direction_to_ray_origin: Vector3D,
+        normal: NumpyVector3D,
+        direction_to_light: NumpyVector3D,
+        direction_to_ray_origin: NumpyVector3D,
     ):
         phong = (direction_to_light + direction_to_ray_origin).norm()
-        return RGBColor(1, 1, 1) * np.power(np.clip(normal.dot(phong), 0, 1), 50)
+        return NumpyRGBColor(1, 1, 1) * np.power(np.clip(normal.dot(phong), 0, 1), 50)
 
-    def calculate_ambient_color(self) -> RGBColor:
-        return RGBColor(0.05, 0.05, 0.05)
+    def calculate_ambient_color(self) -> NumpyRGBColor:
+        return NumpyRGBColor(0.05, 0.05, 0.05)
 
 
 class NumpySphere(Shape):
     def __init__(
-        self, center: Vector3D, radius: float, diffuse: RGBColor, mirror: float = 0.5
+        self,
+        center: NumpyVector3D,
+        radius: float,
+        diffuse: NumpyRGBColor,
+        mirror: float = 0.5,
     ) -> None:
         self.position = center
         self.radius = radius
         self.diffuse = diffuse
         self.mirror = mirror
 
-    def intersect(self, ray_origin: Vector3D, normalized_ray_direction: Vector3D):
+    def intersect(
+        self, ray_origin: NumpyVector3D, normalized_ray_direction: NumpyVector3D
+    ):
         """Cette fonction calcule l'intersection entre un rayon (défini par son origine
         et sa direction) et une sphère (définie par self.position et self.radius).
         Elle retourne la distance entre l'origine du rayon et le point d'intersection,
@@ -208,16 +266,16 @@ class NumpySphere(Shape):
         condition_to_have_intersection = (discriminator > 0) & (solution > 0)
         return np.where(condition_to_have_intersection, solution, FARAWAY)
 
-    def diffusecolor(self, intersection_point) -> Vector3D:
+    def diffusecolor(self, intersection_point) -> NumpyVector3D:
         return self.diffuse
 
     def create_shader(
         self,
-        ray_origin: Vector3D,
-        normalized_ray_direction: Vector3D,
+        ray_origin: NumpyVector3D,
+        normalized_ray_direction: NumpyVector3D,
         distance_origin_to_intersection,
         scene: Scene3D,
-        ray_tracer: RayTracer,
+        ray_tracer: RenderService,
         camera: Camera,
         light: PointLight,
         reflection_gain: float,
@@ -246,24 +304,24 @@ class CheckeredSphere(NumpySphere):
         return self.diffuse * checker
 
 
-class NumpyRayTracer(RayTracer):
-    def render(
+class NumpyRenderService(RenderService):
+    def render_scene(
         self,
         camera: Camera,
         light: PointLight,
-        ray_origin: Vector3D,
-        normalized_ray_direction: Vector3D,
+        ray_origin: NumpyVector3D,
+        normalized_ray_direction: NumpyVector3D,
         scene: Scene3D,
         reflection_gain: float,
         specular_gain: float,
-    ) -> RGBColor:
+    ) -> NumpyRGBColor:
         distances = [
             shape.intersect(ray_origin, normalized_ray_direction)
             for shape in scene.shapes
         ]
         nearest_distance = reduce(np.minimum, distances)
 
-        color = RGBColor(0, 0, 0)
+        color = NumpyRGBColor(0, 0, 0)
 
         for shape, distance in zip(scene.shapes, distances):
             hit: bool = (nearest_distance != FARAWAY) & (distance == nearest_distance)
@@ -290,3 +348,20 @@ class NumpyRayTracer(RayTracer):
                 color += computed_color.place(hit)
 
         return color
+
+
+def get_rays_destinations(render_image: RenderImage, camera: Camera) -> np.ndarray:
+    aspect_ratio = float(render_image.width) / render_image.height
+    projection_canva = (-1, 1 / aspect_ratio + 0.25, 1, -1 / aspect_ratio + 0.25)
+    x = np.tile(
+        np.linspace(projection_canva[0], projection_canva[2], render_image.width),
+        render_image.height,
+    )
+    y = np.repeat(
+        np.linspace(projection_canva[1], projection_canva[3], render_image.height),
+        render_image.width,
+    )
+
+    ray_destinations = NumpyVector3D(x, y, 0)
+
+    return (ray_destinations - camera.position).norm()

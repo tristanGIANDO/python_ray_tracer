@@ -1,57 +1,13 @@
-import numbers
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
-import numpy as np
-
-
-def extract(cond, x) -> numbers.Number | np.ndarray:  # TODO: where to put this?
-    if isinstance(x, numbers.Number):
-        return x
-    else:
-        return np.extract(cond, x)
-
 
 class Vector3D:
-    def __init__(self, x: int | float, y: int | float, z: int | float) -> None:
-        (self.x, self.y, self.z) = (x, y, z)
-
-    def __mul__(self, other) -> "Vector3D":
-        return Vector3D(self.x * other, self.y * other, self.z * other)
-
-    def __add__(self, other) -> "Vector3D":
-        return Vector3D(self.x + other.x, self.y + other.y, self.z + other.z)
-
-    def __sub__(self, other) -> "Vector3D":
-        return Vector3D(self.x - other.x, self.y - other.y, self.z - other.z)
-
-    def dot(self, other):
-        return (self.x * other.x) + (self.y * other.y) + (self.z * other.z)
-
-    def __abs__(self) -> int | float:
-        return self.dot(self)
-
-    def norm(self):
-        mag = np.sqrt(abs(self))
-        return self * (1.0 / np.where(mag == 0, 1, mag))
-
-    def components(self) -> tuple[int | float, int | float, int | float]:
-        return (self.x, self.y, self.z)
-
-    def extract(self, cond) -> "Vector3D":
-        return Vector3D(
-            extract(cond, self.x), extract(cond, self.y), extract(cond, self.z)
-        )
-
-    def place(self, cond) -> "Vector3D":
-        r = Vector3D(np.zeros(cond.shape), np.zeros(cond.shape), np.zeros(cond.shape))
-        np.place(r.x, cond, self.x)
-        np.place(r.y, cond, self.y)
-        np.place(r.z, cond, self.z)
-        return r
+    pass
 
 
-RGBColor = Vector3D
+class RGBColor(Vector3D):
+    pass
 
 
 @dataclass
@@ -70,7 +26,7 @@ class Shape(ABC):
         pass
 
     @abstractmethod
-    def diffusecolor(self, intersection_point: Vector3D):
+    def diffusecolor(self, intersection_point: Vector3D) -> RGBColor:
         pass
 
     @abstractmethod
@@ -85,7 +41,7 @@ class Shape(ABC):
         light: PointLight,
         reflection_gain: float,
         specular_gain: float,
-    ):
+    ) -> RGBColor:
         pass
 
 
