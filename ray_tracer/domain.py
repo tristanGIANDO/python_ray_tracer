@@ -48,13 +48,7 @@ class Shape(ABC):
 
 
 @dataclass
-class RenderImage:  # TODO: transformer en render_config
-    width: int
-    height: int
-
-
-@dataclass
-class Scene3D:  # TODO: ajouter lights
+class Scene3D:
     shapes: list[Shape]
     lights: list[PointLight]
     camera: Camera

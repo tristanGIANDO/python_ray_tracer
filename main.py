@@ -3,7 +3,7 @@ from pathlib import Path
 
 from ray_tracer.application import render_image_pipeline
 from ray_tracer.domain import Camera, PointLight, Scene3D
-from ray_tracer.infra_numpy import (
+from ray_tracer.infrastructure import (
     CheckeredSphere,
     NumpyRenderService,
     NumpyRGBColor,
