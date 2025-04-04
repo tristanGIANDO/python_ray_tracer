@@ -83,6 +83,7 @@ class NumpyShader(Shader):
         reflection_gain: float,
         specular_gain: float,
         specular_roughness: float,
+        iridescence_gain: float,
     ):
         self.shape = shape
         self.ray_tracer = ray_tracer
@@ -93,6 +94,7 @@ class NumpyShader(Shader):
         self.reflection_gain = reflection_gain
         self.specular_gain = specular_gain
         self.specular_roughness = specular_roughness
+        self.iridescence_gain = iridescence_gain
 
         self.shader = self.create()
 
@@ -128,21 +130,19 @@ class NumpyShader(Shader):
             intersection_point, normal, direction_to_light, is_in_light
         )
 
-        color += (
-            self._calculate_reflection(
-                nudged_intersection_point,
-                normal,
-            )
-            * self.reflection_gain
+        color += self._calculate_reflection(
+            nudged_intersection_point,
+            normal,
         )
 
         color += (
             self._calculate_phong_specular(
                 normal, direction_to_light, direction_to_ray_origin
             )
-            * self.specular_gain
             * is_in_light
         )
+
+        color += self._calculate_iridescence(normal, direction_to_ray_origin)
 
         return color
 
@@ -188,6 +188,7 @@ class NumpyShader(Shader):
                 self.scene,
             )
             * self.shape.mirror
+            * self.reflection_gain
         )
 
     def _calculate_phong_specular(
@@ -201,12 +202,38 @@ class NumpyShader(Shader):
             (1 - self.specular_roughness) * 100
         )  # more user friendly to have roughness between 0 and 1 where 0 means no roughness and 1 means very rough
 
-        return NumpyRGBColor(1, 1, 1) * np.power(
-            np.clip(normal.dot(phong), 0, 1), unclamped_roughness
+        return (
+            NumpyRGBColor(1, 1, 1)
+            * np.power(np.clip(normal.dot(phong), 0, 1), unclamped_roughness)
+            * self.specular_gain
         )
 
     def _calculate_ambient_color(self) -> NumpyRGBColor:
         return NumpyRGBColor(0.05, 0.05, 0.05)
+
+    def _calculate_iridescence(
+        self,
+        normal: NumpyVector3D,
+        direction_to_ray_origin: NumpyVector3D,
+    ) -> NumpyRGBColor:
+        """Irisdescence effect based on the angle between the normal and the direction to the ray origin.
+        The more the angle is close to 90 degrees, the more the iridescence effect is visible.
+        The iridescence effect is more pronounced at the edges of the object.
+        """
+        view_angle = np.clip(normal.dot(direction_to_ray_origin), 0.0, 1.0)
+
+        # L'iridescence est plus marquée lorsque l'angle entre la normale et la vue est plus grand (bordures)
+        iridescence_factor = (
+            np.abs(view_angle - 0.5)
+            * 2  # 0.5 is the middle of the angle, it amplifies the effect on the edges
+        )
+
+        color_variation = np.sin(iridescence_factor * np.pi)
+        iridescence_color = NumpyRGBColor(
+            color_variation, 1 - color_variation, 0.5
+        )  # modify z to shift the color
+
+        return iridescence_color * self.iridescence_gain
 
 
 class NumpySphere(Shape):
@@ -325,10 +352,12 @@ class NumpyRenderer(Renderer):
         reflection_gain: float = 0.0,
         specular_gain: float = 1.0,
         specular_roughness: float = 0.5,
+        iridescence_gain: float = 0.0,
     ) -> None:
         self.reflection_gain = reflection_gain
         self.specular_gain = specular_gain
         self.specular_roughness = specular_roughness
+        self.iridescence_gain = iridescence_gain
 
     def raytrace_scene(
         self,
@@ -364,6 +393,7 @@ class NumpyRenderer(Renderer):
                     self.reflection_gain,
                     self.specular_gain,
                     self.specular_roughness,
+                    self.iridescence_gain,
                 ).to_rgb()
 
                 color += computed_color.place(hit)
