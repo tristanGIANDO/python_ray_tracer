@@ -5,18 +5,24 @@ from ray_tracer.application import render_image_pipeline
 from ray_tracer.domain import Camera, PointLight, Scene3D
 from ray_tracer.infrastructure import (
     CheckeredSphere,
-    NumpyRenderService,
+    NumpyRenderer,
     NumpyRGBColor,
     NumpySphere,
+    NumpyTexturedSphere,
     NumpyVector3D,
 )
 
 if __name__ == "__main__":
-    render_service = NumpyRenderService()
+    renderer = NumpyRenderer(0.5, 1.0)
 
     scene = Scene3D(
         [
-            NumpySphere(NumpyVector3D(0.55, 0.5, 3), 1.0, NumpyRGBColor(0, 1, 1)),
+            NumpyTexturedSphere(
+                NumpyVector3D(0.55, 0.5, 3),
+                1.0,
+                Path("sourceimages/2k_earth_daymap.jpg"),
+                # NumpyRGBColor(0, 1, 1),
+            ),
             NumpySphere(
                 NumpyVector3D(-0.45, 0.1, 1), 0.4, NumpyRGBColor(0.5, 0.5, 0.5)
             ),
@@ -34,5 +40,5 @@ if __name__ == "__main__":
     output_path = Path("render.png")
 
     start_time = time.time()
-    render_image_pipeline(scene, output_path, render_service, 0.5, 1.0)
+    render_image_pipeline(scene, output_path, renderer)
     print("Took", time.time() - start_time)

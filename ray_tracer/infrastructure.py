@@ -1,16 +1,18 @@
 import numbers
 from functools import reduce
+from pathlib import Path
+from typing import Self
 
 import numpy as np
 from PIL import Image
 
-from ray_tracer.application import RenderService, Shader
+from ray_tracer.application import Renderer, Shader
 from ray_tracer.domain import Camera, RGBColor, Scene3D, Shape, Vector3D
 
 FARAWAY = 1.0e39
 
 
-def extract(cond, x):
+def extract(cond, x) -> numbers.Number | np.ndarray:
     if isinstance(x, numbers.Number):
         return x
     else:
@@ -21,7 +23,7 @@ class NumpyVector3D(Vector3D):
     def __init__(self, x: int | float, y: int | float, z: int | float) -> None:
         (self.x, self.y, self.z) = (x, y, z)
 
-    def dot(self, other: "NumpyVector3D") -> float:
+    def dot(self, other: Self) -> float:
         return (self.x * other.x) + (self.y * other.y) + (self.z * other.z)
 
     def __abs__(self) -> float:
@@ -30,25 +32,28 @@ class NumpyVector3D(Vector3D):
     def components(self) -> tuple[float, float, float]:
         return (self.x, self.y, self.z)
 
-    def __mul__(self, other: int | float) -> "NumpyVector3D":
+    def __mul__(self, other: int | float) -> Self:
         return NumpyVector3D(self.x * other, self.y * other, self.z * other)
 
-    def __add__(self, other: "NumpyVector3D") -> "NumpyVector3D":
+    def __add__(self, other: Self) -> Self:
         return NumpyVector3D(self.x + other.x, self.y + other.y, self.z + other.z)
 
-    def __sub__(self, other: "NumpyVector3D") -> "NumpyVector3D":
+    def __sub__(self, other: Self) -> Self:
         return NumpyVector3D(self.x - other.x, self.y - other.y, self.z - other.z)
 
     def norm(self):
         mag = np.sqrt(self.dot(self))
         return self * (1.0 / np.where(mag == 0, 1, mag))
 
-    def extract(self, cond) -> "NumpyVector3D":
-        return NumpyVector3D(
+    def extract(self, cond) -> Self | "NumpyVectorArray3D":
+        if isinstance(cond, numbers.Number):
+            return self
+
+        return NumpyVectorArray3D(
             extract(cond, self.x), extract(cond, self.y), extract(cond, self.z)
         )
 
-    def place(self, cond) -> "NumpyVector3D":
+    def place(self, cond) -> Self:
         r = NumpyVector3D(
             np.zeros(cond.shape), np.zeros(cond.shape), np.zeros(cond.shape)
         )
@@ -56,6 +61,10 @@ class NumpyVector3D(Vector3D):
         np.place(r.y, cond, self.y)
         np.place(r.z, cond, self.z)
         return r
+
+
+class NumpyVectorArray3D(NumpyVector3D):
+    pass
 
 
 class NumpyRGBColor(NumpyVector3D):
@@ -66,10 +75,10 @@ class NumpyShader(Shader):
     def __init__(
         self,
         shape: Shape,
-        ray_tracer: RenderService,
+        ray_tracer: Renderer,
         ray_origin: NumpyVector3D,
-        normalized_ray_direction: NumpyVector3D,
-        distance_origin_to_intersection,
+        normalized_ray_direction: NumpyVectorArray3D,
+        distance_origin_to_intersection: np.ndarray,
         scene: Scene3D,
         reflection_gain: float,
         specular_gain: float,
@@ -106,19 +115,19 @@ class NumpyShader(Shader):
             intersection_point + normal * 0.0001
         )  # to avoid itself
 
-        is_in_light = self.calculate_shadow(
+        is_in_light = self._calculate_shadow(
             nudged_intersection_point,
             direction_to_light,
         )
 
-        color = self.calculate_ambient_color()
+        color = self._calculate_ambient_color()
 
-        color += self.calculate_diffuse(
+        color += self._calculate_diffuse(
             intersection_point, normal, direction_to_light, is_in_light
         )
 
         color += (
-            self.calculate_reflection(
+            self._calculate_reflection(
                 nudged_intersection_point,
                 normal,
             )
@@ -126,7 +135,7 @@ class NumpyShader(Shader):
         )
 
         color += (
-            self.calculate_phong_specular(
+            self._calculate_phong_specular(
                 normal, direction_to_light, direction_to_ray_origin
             )
             * self.specular_gain
@@ -135,7 +144,7 @@ class NumpyShader(Shader):
 
         return color
 
-    def calculate_shadow(
+    def _calculate_shadow(
         self,
         nudged_intersection_point: NumpyVector3D,
         direction_to_light: NumpyVector3D,
@@ -147,9 +156,9 @@ class NumpyShader(Shader):
         light_nearest = reduce(np.minimum, light_distances)
         return light_distances[self.scene.shapes.index(self.shape)] == light_nearest
 
-    def calculate_diffuse(
+    def _calculate_diffuse(
         self,
-        intersection_point: NumpyVector3D,
+        intersection_point: NumpyVectorArray3D,
         normal: NumpyVector3D,
         direction_to_light: NumpyVector3D,
         is_in_light: bool,
@@ -161,7 +170,7 @@ class NumpyShader(Shader):
             * is_in_light
         )
 
-    def calculate_reflection(
+    def _calculate_reflection(
         self,
         nudged_intersection_point: NumpyVector3D,
         normal: NumpyVector3D,
@@ -171,17 +180,15 @@ class NumpyShader(Shader):
             - normal * 2 * self.normalized_ray_direction.dot(normal)
         ).norm()
         return (
-            self.ray_tracer.render_scene(
+            self.ray_tracer.raytrace_scene(
                 nudged_intersection_point,
                 ray_direction,
                 self.scene,
-                self.reflection_gain,
-                self.specular_gain,
             )
             * self.shape.mirror
         )
 
-    def calculate_phong_specular(
+    def _calculate_phong_specular(
         self,
         normal: NumpyVector3D,
         direction_to_light: NumpyVector3D,
@@ -190,7 +197,7 @@ class NumpyShader(Shader):
         phong = (direction_to_light + direction_to_ray_origin).norm()
         return NumpyRGBColor(1, 1, 1) * np.power(np.clip(normal.dot(phong), 0, 1), 50)
 
-    def calculate_ambient_color(self) -> NumpyRGBColor:
+    def _calculate_ambient_color(self) -> NumpyRGBColor:
         return NumpyRGBColor(0.05, 0.05, 0.05)
 
 
@@ -202,6 +209,7 @@ class NumpySphere(Shape):
         diffuse: NumpyRGBColor,
         mirror: float = 0.5,
     ) -> None:
+        self.center = center
         self.position = center
         self.radius = radius
         self.diffuse = diffuse
@@ -245,26 +253,89 @@ class NumpySphere(Shape):
         condition_to_have_intersection = (discriminator > 0) & (solution > 0)
         return np.where(condition_to_have_intersection, solution, FARAWAY)
 
-    def diffusecolor(self, intersection_point) -> NumpyVector3D:
+    def diffusecolor(self, intersection_point: NumpyVectorArray3D) -> NumpyVector3D:
         return self.diffuse
 
 
+def get_texture_color(texture: np.ndarray, u: float, v: float) -> NumpyRGBColor:
+    """
+    Retrieve the color from a normalized texture image at given UV coordinates.
+
+    Args:
+        texture (np.ndarray): A NumPy array of shape (H, W, 3) with values in [0, 1].
+        u (float): U coordinate (horizontal).
+        v (float): V coordinate (vertical).
+
+    Returns:
+        NumpyRGBColor: The RGB color at the specified UV coordinates.
+    """
+    u = u % 1  # Repeat if u > 1
+    v = v % 1
+    height, width, _ = texture.shape
+
+    i = (
+        (u * (width - 1)).astype(int)
+        if isinstance(u, np.ndarray)
+        else int(u * (width - 1))
+    )
+    j = (
+        (v * (height - 1)).astype(int)
+        if isinstance(v, np.ndarray)
+        else int(v * (height - 1))
+    )
+    color = texture[j, i, :3]
+    if len(color.shape) > 1 and color.shape[0] > 1:
+        color = color.mean(axis=0)  # Reduce to a single RGB value by averaging
+    if color.shape != (3,):
+        if color.shape == (1, 3):
+            color = color.flatten()
+        else:
+            raise ValueError(f"Expected 3 color channels, but got {color.shape}")
+    r, g, b = color
+    return NumpyRGBColor(r, g, b)
+
+
+class NumpyTexturedSphere(NumpySphere):
+    def __init__(
+        self,
+        center: NumpyVector3D,
+        radius: float,
+        texture_path: Path,
+        mirror: float = 0.5,
+    ) -> None:
+        super().__init__(center, radius, NumpyRGBColor(1, 1, 1), mirror)
+        image = Image.open(texture_path).convert("RGB")
+        self.texture = np.asarray(image) / 255.0
+        self.tex_height, self.tex_width, _ = self.texture.shape
+
+    def diffusecolor(self, intersection_point: NumpyVectorArray3D) -> NumpyRGBColor:
+        normal = (intersection_point - self.center).norm()
+
+        u = 0.5 + np.arctan2(normal.z, normal.x) / (2 * np.pi)
+        v = 0.5 - np.arcsin(normal.y) / np.pi
+
+        return get_texture_color(self.texture, u, v)
+
+
 class CheckeredSphere(NumpySphere):
-    def diffusecolor(self, intersection_point):
+    def diffusecolor(self, intersection_point: NumpyVectorArray3D) -> NumpyRGBColor:
         checker = ((intersection_point.x * 2).astype(int) % 2) == (
             (intersection_point.z * 2).astype(int) % 2
         )
+
         return self.diffuse * checker
 
 
-class NumpyRenderService(RenderService):
-    def render_scene(
+class NumpyRenderer(Renderer):
+    def __init__(self, reflection_gain: float, specular_gain: float) -> None:
+        self.reflection_gain = reflection_gain
+        self.specular_gain = specular_gain
+
+    def raytrace_scene(
         self,
         ray_origin: NumpyVector3D,
         normalized_ray_direction: NumpyVector3D,
         scene: Scene3D,
-        reflection_gain: float,
-        specular_gain: float,
     ) -> NumpyRGBColor:
         distances = [
             shape.intersect(ray_origin, normalized_ray_direction)
@@ -278,10 +349,10 @@ class NumpyRenderService(RenderService):
             hit: bool = (nearest_distance != FARAWAY) & (distance == nearest_distance)
 
             if np.any(hit):  # keep only the intersected points
-                extracted_distance_to_intersection = extract(hit, distance)
-                extracted_ray_origin = ray_origin.extract(hit)
-                extracted_normalized_ray_direction = normalized_ray_direction.extract(
-                    hit
+                extracted_distance_to_intersection: np.ndarray = extract(hit, distance)
+                extracted_ray_origin: NumpyVector3D = ray_origin.extract(hit)
+                extracted_normalized_ray_direction: NumpyVectorArray3D = (
+                    normalized_ray_direction.extract(hit)
                 )
 
                 computed_color = NumpyShader(
@@ -291,15 +362,22 @@ class NumpyRenderService(RenderService):
                     extracted_normalized_ray_direction,
                     extracted_distance_to_intersection,
                     scene,
-                    reflection_gain,
-                    specular_gain,
+                    self.reflection_gain,
+                    self.specular_gain,
                 ).to_rgb()
 
                 color += computed_color.place(hit)
 
         return color
 
-    def get_rays_destinations(self, camera: Camera) -> np.ndarray:
+    def get_ray_directions(self, camera: Camera) -> np.ndarray:
+        """
+        1. Adjusts the aspect ratio of the camera to fit the image desired size.
+        2. Creates a grid of points in the camera's view frustum (like pixels on a screen).
+        3. Normalizes the grid points to create ray directions.
+        4. Returns the normalized ray directions.
+        The grid is created by tiling and repeating the x and y coordinates based on the camera's width and height.
+        """
         aspect_ratio = float(camera.width) / camera.height
         screen = (-1, 1 / aspect_ratio + 0.25, 1, -1 / aspect_ratio + 0.25)
         x = np.tile(
@@ -311,19 +389,16 @@ class NumpyRenderService(RenderService):
             camera.width,
         )
 
-        ray_destinations = NumpyVector3D(x, y, 0)
-
-        return (ray_destinations - camera.position).norm()
+        return (NumpyVector3D(x, y, 0) - camera.position).norm()
 
     def save_image(self, color: RGBColor, camera: Camera, output_path: str) -> None:
         rgb_colors = [
             Image.fromarray(
                 (
-                    255
-                    * np.clip(grey_color, 0, 1).reshape((camera.height, camera.width))
+                    255 * np.clip(layer, 0, 1).reshape((camera.height, camera.width))
                 ).astype(np.uint8),
                 "L",
             )
-            for grey_color in color.components()
+            for layer in color.components()
         ]
         Image.merge("RGB", rgb_colors).save(output_path)

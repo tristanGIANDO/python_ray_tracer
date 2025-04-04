@@ -3,7 +3,8 @@ from dataclasses import dataclass
 
 
 class Vector3D:
-    pass
+    def __init__(self, x: float, y: float, z: float) -> None:
+        (self.x, self.y, self.z) = (x, y, z)
 
 
 class RGBColor(Vector3D):
