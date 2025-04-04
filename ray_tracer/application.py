@@ -1,14 +1,18 @@
 from abc import ABC, abstractmethod
+from pathlib import Path
 
-from ray_tracer.domain import Camera, PointLight, RGBColor, Scene3D, Shape, Vector3D
+from ray_tracer.domain import (
+    RGBColor,
+    Scene3D,
+    Shape,
+    Vector3D,
+)
 
 
 class RenderService(ABC):
     @abstractmethod
     def render_scene(
         self,
-        camera: Camera,
-        light: PointLight,
         ray_origin: Vector3D,
         normalized_ray_direction: Vector3D,
         scene: Scene3D,
@@ -61,3 +65,23 @@ class Shader(ABC):
     @abstractmethod
     def calculate_ambient_color() -> RGBColor:
         pass
+
+
+def render_image_pipeline(
+    scene: Scene3D,
+    output_path: Path,
+    render_service: RenderService,
+    reflection_gain: float,
+    specular_gain: float,
+) -> None:
+    normalized_ray_destinations = render_service.get_rays_destinations(scene.camera)
+
+    color = render_service.render_scene(
+        scene.camera.position,
+        normalized_ray_destinations,
+        scene,
+        reflection_gain,
+        specular_gain,
+    )
+
+    render_service.save_image(color, scene.camera, output_path)

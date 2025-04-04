@@ -13,6 +13,8 @@ class RGBColor(Vector3D):
 @dataclass
 class Camera:
     position: Vector3D
+    width: int
+    height: int
 
 
 @dataclass
@@ -54,3 +56,5 @@ class RenderImage:  # TODO: transformer en render_config
 @dataclass
 class Scene3D:  # TODO: ajouter lights
     shapes: list[Shape]
+    lights: list[PointLight]
+    camera: Camera

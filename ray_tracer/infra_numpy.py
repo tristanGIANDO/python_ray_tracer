@@ -2,16 +2,10 @@ import numbers
 from functools import reduce
 
 import numpy as np
+from PIL import Image
 
 from ray_tracer.application import RenderService, Shader
-from ray_tracer.domain import (
-    Camera,
-    PointLight,
-    RenderImage,
-    Scene3D,
-    Shape,
-    Vector3D,
-)
+from ray_tracer.domain import Camera, PointLight, RGBColor, Scene3D, Shape, Vector3D
 
 FARAWAY = 1.0e39
 
@@ -128,8 +122,6 @@ class NumpyShader(Shader):
                 self.shape.mirror,
                 self.reflection_gain,
                 self.specular_gain,
-                self.camera,
-                self.light,
             )
             * self.reflection_gain
         )
@@ -183,16 +175,12 @@ class NumpyShader(Shader):
         mirror: float,
         reflection_gain: float,
         specular_gain: float,
-        camera: Camera,
-        light: PointLight,
     ) -> NumpyRGBColor:
         ray_direction = (
             normalized_ray_direction - normal * 2 * normalized_ray_direction.dot(normal)
         ).norm()
         return (
             ray_tracer.render_scene(
-                camera,
-                light,
                 nudged_intersection_point,
                 ray_direction,
                 scene,
@@ -307,8 +295,6 @@ class CheckeredSphere(NumpySphere):
 class NumpyRenderService(RenderService):
     def render_scene(
         self,
-        camera: Camera,
-        light: PointLight,
         ray_origin: NumpyVector3D,
         normalized_ray_direction: NumpyVector3D,
         scene: Scene3D,
@@ -339,8 +325,8 @@ class NumpyRenderService(RenderService):
                     extracted_distance_to_intersection,
                     scene,
                     self,
-                    camera,
-                    light,
+                    scene.camera,
+                    scene.lights[0],
                     reflection_gain,
                     specular_gain,
                 )
@@ -349,19 +335,31 @@ class NumpyRenderService(RenderService):
 
         return color
 
+    def get_rays_destinations(self, camera: Camera) -> np.ndarray:
+        aspect_ratio = float(camera.width) / camera.height
+        screen = (-1, 1 / aspect_ratio + 0.25, 1, -1 / aspect_ratio + 0.25)
+        x = np.tile(
+            np.linspace(screen[0], screen[2], camera.width),
+            camera.height,
+        )
+        y = np.repeat(
+            np.linspace(screen[1], screen[3], camera.height),
+            camera.width,
+        )
 
-def get_rays_destinations(render_image: RenderImage, camera: Camera) -> np.ndarray:
-    aspect_ratio = float(render_image.width) / render_image.height
-    projection_canva = (-1, 1 / aspect_ratio + 0.25, 1, -1 / aspect_ratio + 0.25)
-    x = np.tile(
-        np.linspace(projection_canva[0], projection_canva[2], render_image.width),
-        render_image.height,
-    )
-    y = np.repeat(
-        np.linspace(projection_canva[1], projection_canva[3], render_image.height),
-        render_image.width,
-    )
+        ray_destinations = NumpyVector3D(x, y, 0)
 
-    ray_destinations = NumpyVector3D(x, y, 0)
+        return (ray_destinations - camera.position).norm()
 
-    return (ray_destinations - camera.position).norm()
+    def save_image(self, color: RGBColor, camera: Camera, output_path: str) -> None:
+        rgb_colors = [
+            Image.fromarray(
+                (
+                    255
+                    * np.clip(grey_color, 0, 1).reshape((camera.height, camera.width))
+                ).astype(np.uint8),
+                "L",
+            )
+            for grey_color in color.components()
+        ]
+        Image.merge("RGB", rgb_colors).save(output_path)
