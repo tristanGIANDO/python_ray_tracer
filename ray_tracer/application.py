@@ -1,12 +1,7 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from ray_tracer.domain import (
-    RGBColor,
-    Scene3D,
-    Shape,
-    Vector3D,
-)
+from ray_tracer.domain import Camera, RGBColor, Scene3D, Shape, Vector3D
 
 
 class RenderService(ABC):
@@ -19,6 +14,19 @@ class RenderService(ABC):
         reflection_gain: float,
         specular_gain: float,
     ) -> RGBColor:
+        pass
+
+    @abstractmethod
+    def get_rays_destinations(self, camera: Camera) -> list[Vector3D]:
+        pass
+
+    @abstractmethod
+    def save_image(
+        self,
+        color: RGBColor,
+        camera: Camera,
+        output_path: Path,
+    ) -> None:
         pass
 
 

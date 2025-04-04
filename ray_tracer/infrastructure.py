@@ -5,7 +5,7 @@ import numpy as np
 from PIL import Image
 
 from ray_tracer.application import RenderService, Shader
-from ray_tracer.domain import Camera, PointLight, RGBColor, Scene3D, Shape, Vector3D
+from ray_tracer.domain import Camera, RGBColor, Scene3D, Shape, Vector3D
 
 FARAWAY = 1.0e39
 
@@ -66,8 +66,6 @@ class NumpyShader(Shader):
     def __init__(
         self,
         shape: Shape,
-        light: PointLight,
-        camera: Camera,
         ray_tracer: RenderService,
         ray_origin: NumpyVector3D,
         normalized_ray_direction: NumpyVector3D,
@@ -77,8 +75,6 @@ class NumpyShader(Shader):
         specular_gain: float,
     ):
         self.shape = shape
-        self.light = light
-        self.camera = camera
         self.ray_tracer = ray_tracer
         self.ray_origin = ray_origin
         self.normalized_ray_direction = normalized_ray_direction
@@ -87,21 +83,30 @@ class NumpyShader(Shader):
         self.reflection_gain = reflection_gain
         self.specular_gain = specular_gain
 
-    def create(self) -> NumpyRGBColor:
+        self.shader = self.create()
+
+    def to_rgb(self) -> NumpyRGBColor:
+        return NumpyRGBColor(
+            np.clip(self.shader.x, 0, 1),
+            np.clip(self.shader.y, 0, 1),
+            np.clip(self.shader.z, 0, 1),
+        )
+
+    def create(self) -> NumpyVector3D:
         intersection_point = (
             self.ray_origin
             + self.normalized_ray_direction * self.distance_origin_to_intersection
         )
         normal = (intersection_point - self.shape.position) * (1.0 / self.shape.radius)
-        direction_to_light = (self.light.position - intersection_point).norm()
-        direction_to_ray_origin = (self.camera.position - intersection_point).norm()
+        direction_to_light = (self.scene.lights[0].position - intersection_point).norm()
+        direction_to_ray_origin = (
+            self.scene.camera.position - intersection_point
+        ).norm()
         nudged_intersection_point = (
             intersection_point + normal * 0.0001
         )  # to avoid itself
 
         is_in_light = self.calculate_shadow(
-            self.scene.shapes.index(self.shape),
-            self.scene.shapes,
             nudged_intersection_point,
             direction_to_light,
         )
@@ -109,19 +114,13 @@ class NumpyShader(Shader):
         color = self.calculate_ambient_color()
 
         color += self.calculate_diffuse(
-            self.shape, intersection_point, normal, direction_to_light, is_in_light
+            intersection_point, normal, direction_to_light, is_in_light
         )
 
         color += (
             self.calculate_reflection(
-                self.ray_tracer,
                 nudged_intersection_point,
                 normal,
-                self.normalized_ray_direction,
-                self.scene,
-                self.shape.mirror,
-                self.reflection_gain,
-                self.specular_gain,
             )
             * self.reflection_gain
         )
@@ -138,21 +137,18 @@ class NumpyShader(Shader):
 
     def calculate_shadow(
         self,
-        shape_index: int,
-        shapes: list[Shape],
         nudged_intersection_point: NumpyVector3D,
         direction_to_light: NumpyVector3D,
     ) -> bool:
         light_distances = [
             shape.intersect(nudged_intersection_point, direction_to_light)
-            for shape in shapes
+            for shape in self.scene.shapes
         ]
         light_nearest = reduce(np.minimum, light_distances)
-        return light_distances[shape_index] == light_nearest
+        return light_distances[self.scene.shapes.index(self.shape)] == light_nearest
 
     def calculate_diffuse(
         self,
-        shape: Shape,
         intersection_point: NumpyVector3D,
         normal: NumpyVector3D,
         direction_to_light: NumpyVector3D,
@@ -160,34 +156,29 @@ class NumpyShader(Shader):
     ):
         diffuse_light_intensity = np.maximum(normal.dot(direction_to_light), 0)
         return (
-            shape.diffusecolor(intersection_point)
+            self.shape.diffusecolor(intersection_point)
             * diffuse_light_intensity
             * is_in_light
         )
 
     def calculate_reflection(
         self,
-        ray_tracer: RenderService,
         nudged_intersection_point: NumpyVector3D,
         normal: NumpyVector3D,
-        normalized_ray_direction: NumpyVector3D,
-        scene: Scene3D,
-        mirror: float,
-        reflection_gain: float,
-        specular_gain: float,
     ) -> NumpyRGBColor:
         ray_direction = (
-            normalized_ray_direction - normal * 2 * normalized_ray_direction.dot(normal)
+            self.normalized_ray_direction
+            - normal * 2 * self.normalized_ray_direction.dot(normal)
         ).norm()
         return (
-            ray_tracer.render_scene(
+            self.ray_tracer.render_scene(
                 nudged_intersection_point,
                 ray_direction,
-                scene,
-                reflection_gain,
-                specular_gain,
+                self.scene,
+                self.reflection_gain,
+                self.specular_gain,
             )
-            * mirror
+            * self.shape.mirror
         )
 
     def calculate_phong_specular(
@@ -257,32 +248,6 @@ class NumpySphere(Shape):
     def diffusecolor(self, intersection_point) -> NumpyVector3D:
         return self.diffuse
 
-    def create_shader(
-        self,
-        ray_origin: NumpyVector3D,
-        normalized_ray_direction: NumpyVector3D,
-        distance_origin_to_intersection,
-        scene: Scene3D,
-        ray_tracer: RenderService,
-        camera: Camera,
-        light: PointLight,
-        reflection_gain: float,
-        specular_gain: float,
-    ):
-        shader_creator = NumpyShader(
-            self,
-            light,
-            camera,
-            ray_tracer,
-            ray_origin,
-            normalized_ray_direction,
-            distance_origin_to_intersection,
-            scene,
-            reflection_gain,
-            specular_gain,
-        )
-        return shader_creator.create()
-
 
 class CheckeredSphere(NumpySphere):
     def diffusecolor(self, intersection_point):
@@ -319,17 +284,16 @@ class NumpyRenderService(RenderService):
                     hit
                 )
 
-                computed_color = shape.create_shader(
+                computed_color = NumpyShader(
+                    shape,
+                    self,
                     extracted_ray_origin,
                     extracted_normalized_ray_direction,
                     extracted_distance_to_intersection,
                     scene,
-                    self,
-                    scene.camera,
-                    scene.lights[0],
                     reflection_gain,
                     specular_gain,
-                )
+                ).to_rgb()
 
                 color += computed_color.place(hit)
 

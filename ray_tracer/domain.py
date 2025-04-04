@@ -31,21 +31,6 @@ class Shape(ABC):
     def diffusecolor(self, intersection_point: Vector3D) -> RGBColor:
         pass
 
-    @abstractmethod
-    def create_shader(  # TODO: sortir de la classe Shape
-        self,
-        ray_origin: Vector3D,
-        normalized_ray_direction: Vector3D,
-        distance_origin_to_intersection,
-        scene,  # TODO: move this
-        ray_tracer,  # TODO: move this
-        camera: Camera,
-        light: PointLight,
-        reflection_gain: float,
-        specular_gain: float,
-    ) -> RGBColor:
-        pass
-
 
 @dataclass
 class Scene3D:
