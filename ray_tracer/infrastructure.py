@@ -82,6 +82,7 @@ class NumpyShader(Shader):
         scene: Scene3D,
         reflection_gain: float,
         specular_gain: float,
+        specular_roughness: float,
     ):
         self.shape = shape
         self.ray_tracer = ray_tracer
@@ -91,6 +92,7 @@ class NumpyShader(Shader):
         self.scene = scene
         self.reflection_gain = reflection_gain
         self.specular_gain = specular_gain
+        self.specular_roughness = specular_roughness
 
         self.shader = self.create()
 
@@ -195,7 +197,13 @@ class NumpyShader(Shader):
         direction_to_ray_origin: NumpyVector3D,
     ):
         phong = (direction_to_light + direction_to_ray_origin).norm()
-        return NumpyRGBColor(1, 1, 1) * np.power(np.clip(normal.dot(phong), 0, 1), 50)
+        unclamped_roughness = (
+            (1 - self.specular_roughness) * 100
+        )  # more user friendly to have roughness between 0 and 1 where 0 means no roughness and 1 means very rough
+
+        return NumpyRGBColor(1, 1, 1) * np.power(
+            np.clip(normal.dot(phong), 0, 1), unclamped_roughness
+        )
 
     def _calculate_ambient_color(self) -> NumpyRGBColor:
         return NumpyRGBColor(0.05, 0.05, 0.05)
@@ -312,9 +320,15 @@ class CheckeredSphere(NumpySphere):
 
 
 class NumpyRenderer(Renderer):
-    def __init__(self, reflection_gain: float, specular_gain: float) -> None:
+    def __init__(
+        self,
+        reflection_gain: float = 0.0,
+        specular_gain: float = 1.0,
+        specular_roughness: float = 0.5,
+    ) -> None:
         self.reflection_gain = reflection_gain
         self.specular_gain = specular_gain
+        self.specular_roughness = specular_roughness
 
     def raytrace_scene(
         self,
@@ -349,6 +363,7 @@ class NumpyRenderer(Renderer):
                     scene,
                     self.reflection_gain,
                     self.specular_gain,
+                    self.specular_roughness,
                 ).to_rgb()
 
                 color += computed_color.place(hit)

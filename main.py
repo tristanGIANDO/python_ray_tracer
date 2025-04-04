@@ -12,7 +12,7 @@ from ray_tracer.infrastructure import (
 )
 
 if __name__ == "__main__":
-    renderer = NumpyRenderer(0.0, 1.0)
+    renderer = NumpyRenderer(0.0, 1.0, 0.5)
 
     scene = Scene3D(
         [
