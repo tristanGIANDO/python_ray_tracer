@@ -257,44 +257,6 @@ class NumpySphere(Shape):
         return self.diffuse
 
 
-def get_texture_color(texture: np.ndarray, u: float, v: float) -> NumpyRGBColor:
-    """
-    Retrieve the color from a normalized texture image at given UV coordinates.
-
-    Args:
-        texture (np.ndarray): A NumPy array of shape (H, W, 3) with values in [0, 1].
-        u (float): U coordinate (horizontal).
-        v (float): V coordinate (vertical).
-
-    Returns:
-        NumpyRGBColor: The RGB color at the specified UV coordinates.
-    """
-    u = u % 1  # Repeat if u > 1
-    v = v % 1
-    height, width, _ = texture.shape
-
-    i = (
-        (u * (width - 1)).astype(int)
-        if isinstance(u, np.ndarray)
-        else int(u * (width - 1))
-    )
-    j = (
-        (v * (height - 1)).astype(int)
-        if isinstance(v, np.ndarray)
-        else int(v * (height - 1))
-    )
-    color = texture[j, i, :3]
-    if len(color.shape) > 1 and color.shape[0] > 1:
-        color = color.mean(axis=0)  # Reduce to a single RGB value by averaging
-    if color.shape != (3,):
-        if color.shape == (1, 3):
-            color = color.flatten()
-        else:
-            raise ValueError(f"Expected 3 color channels, but got {color.shape}")
-    r, g, b = color
-    return NumpyRGBColor(r, g, b)
-
-
 class NumpyTexturedSphere(NumpySphere):
     def __init__(
         self,
@@ -306,7 +268,6 @@ class NumpyTexturedSphere(NumpySphere):
         super().__init__(center, radius, NumpyRGBColor(1, 1, 1), mirror)
         image = Image.open(texture_path).convert("RGB")
         self.texture = np.asarray(image) / 255.0
-        self.tex_height, self.tex_width, _ = self.texture.shape
 
     def diffusecolor(self, intersection_point: NumpyVectorArray3D) -> NumpyRGBColor:
         normal = (intersection_point - self.center).norm()
@@ -314,7 +275,31 @@ class NumpyTexturedSphere(NumpySphere):
         u = 0.5 + np.arctan2(normal.z, normal.x) / (2 * np.pi)
         v = 0.5 - np.arcsin(normal.y) / np.pi
 
-        return get_texture_color(self.texture, u, v)
+        u = u % 1  # Repeat if u > 1
+        v = v % 1
+        height, width, _ = self.texture.shape
+
+        i = (
+            (u * (width - 1)).astype(int)
+            if isinstance(u, np.ndarray)
+            else int(u * (width - 1))
+        )
+        j = (
+            (v * (height - 1)).astype(int)
+            if isinstance(v, np.ndarray)
+            else int(v * (height - 1))
+        )
+
+        color = self.texture[j, i, :3]
+        if len(color.shape) > 1 and color.shape[0] > 1:
+            color = color.mean(axis=0)  # Reduce to a single RGB value by averaging
+        if color.shape != (3,):
+            if color.shape == (1, 3):
+                color = color.flatten()
+            else:
+                raise ValueError(f"Expected 3 color channels, but got {color.shape}")
+        r, g, b = color
+        return NumpyRGBColor(r, g, b)
 
 
 class CheckeredSphere(NumpySphere):

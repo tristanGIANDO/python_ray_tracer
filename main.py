@@ -8,20 +8,18 @@ from ray_tracer.infrastructure import (
     NumpyRenderer,
     NumpyRGBColor,
     NumpySphere,
-    NumpyTexturedSphere,
     NumpyVector3D,
 )
 
 if __name__ == "__main__":
-    renderer = NumpyRenderer(0.5, 1.0)
+    renderer = NumpyRenderer(0.0, 1.0)
 
     scene = Scene3D(
         [
-            NumpyTexturedSphere(
+            NumpySphere(
                 NumpyVector3D(0.55, 0.5, 3),
                 1.0,
-                Path("sourceimages/2k_earth_daymap.jpg"),
-                # NumpyRGBColor(0, 1, 1),
+                NumpyRGBColor(0, 1, 1),
             ),
             NumpySphere(
                 NumpyVector3D(-0.45, 0.1, 1), 0.4, NumpyRGBColor(0.5, 0.5, 0.5)
