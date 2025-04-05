@@ -1,0 +1,16 @@
+[
+    {
+        "type":"Sphere",
+        "centerXYZ":[0.0, 0.0, 6],
+        "radius":4.0,
+        "colorRGB":[0.5, 0.5, 0.5],
+        "reflection":1.0,
+        "roughness":0.5,
+        "texture":""
+    },
+    {
+        "type":"Light",
+        "centerXYZ":[0.0, 6.0, 6.689],
+        "intensityRGB":[1.0,1.0,1.0]
+    }
+]

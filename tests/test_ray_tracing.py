@@ -1,6 +1,6 @@
-from ray_tracer.objects import Light, Sphere
-from ray_tracer.ray_tracing import trace
-from ray_tracer.vectors import Vector3D
+from old_ray_tracer.domain import Light, Sphere
+from old_ray_tracer.ray_tracing import trace
+from old_ray_tracer.domain.vectors import Vector3D
 
 
 def test_trace_no_intersection():

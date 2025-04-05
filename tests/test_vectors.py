@@ -1,6 +1,6 @@
 import numpy as np
 
-from ray_tracer.vectors import Vector3D
+from old_ray_tracer.domain.vectors import Vector3D
 
 
 def test_vector_addition():

@@ -1,7 +1,7 @@
 import pytest
 
-from ray_tracer.objects import Sphere
-from ray_tracer.vectors import Vector3D
+from old_ray_tracer.domain import Sphere
+from old_ray_tracer.domain.vectors import Vector3D
 
 
 def test_sphere_intersection():

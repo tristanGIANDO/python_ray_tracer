@@ -1,10 +1,9 @@
 {
-    "width": 50,
-    "height": 50,
-    "hdri": "sourceimages/hdri_1.jpg",
-    "render_algorithm": "monte_carlo",
-    "max_samples": 20,
+    "image_width": 30,
+    "image_height": 30,
+    "max_samples_per_pixel": 1,
     "max_specular_depth": 1,
+    "background": "sourceimages/hdri_1.jpg",
     "denoise": false,
     "output_path": "data/output_50.png"
 }
