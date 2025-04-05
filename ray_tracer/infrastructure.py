@@ -12,7 +12,13 @@ from ray_tracer.domain import Camera, DomeLight, RGBColor, Scene3D, Shape, Vecto
 FARAWAY = 1.0e39
 
 
-def extract(cond, x) -> numbers.Number | np.ndarray:
+def extract(cond, x: numbers.Number | np.ndarray) -> numbers.Number | np.ndarray:
+    """Extracts elements from an array or returns the number itself if it is a scalar.
+
+    Args:
+        cond (array-like): Condition array to extract elements.
+        x: Input number or array.
+    """
     if isinstance(x, numbers.Number):
         return x
     else:
@@ -20,6 +26,8 @@ def extract(cond, x) -> numbers.Number | np.ndarray:
 
 
 class NumpyVector3D(Vector3D):
+    """Represents a 3D vector with numpy-based operations."""
+
     def __init__(self, x: int | float, y: int | float, z: int | float) -> None:
         (self.x, self.y, self.z) = (x, y, z)
 
@@ -42,10 +50,12 @@ class NumpyVector3D(Vector3D):
         return NumpyVector3D(self.x - other.x, self.y - other.y, self.z - other.z)
 
     def norm(self):
+        """Normalizes the vector to have a magnitude of 1."""
         mag = np.sqrt(self.dot(self))
         return self * (1.0 / np.where(mag == 0, 1, mag))
 
     def extract(self, cond) -> Self | "NumpyVectorArray3D":
+        """Extracts components of the vector based on a condition."""
         if isinstance(cond, numbers.Number):
             return self
 
@@ -54,6 +64,7 @@ class NumpyVector3D(Vector3D):
         )
 
     def place(self, cond) -> Self:
+        """Places the vector's components into a new vector"""
         r = NumpyVector3D(
             np.zeros(cond.shape), np.zeros(cond.shape), np.zeros(cond.shape)
         )
@@ -108,6 +119,7 @@ class NumpyShader(Shader):
         )
 
     def create(self) -> NumpyVector3D:
+        """This is the main function that will be called to compute the color of the pixel."""
         intersection_point = (
             self.ray_origin
             + self.normalized_ray_direction * self.distance_origin_to_intersection
@@ -155,6 +167,16 @@ class NumpyShader(Shader):
         nudged_intersection_point: NumpyVector3D,
         direction_to_light: NumpyVector3D,
     ) -> bool:
+        """Calculates whether the intersection point is in light or in shadow.
+        It does this by checking if the intersection point is closer to the light source
+
+        Args:
+            nudged_intersection_point: Intersection point slightly offset to avoid self-intersection.
+            direction_to_light: Direction vector to the light source.
+
+        Returns:
+            True if the point is in light, False otherwise.
+        """
         light_distances = [
             shape.intersect(nudged_intersection_point, direction_to_light)
             for shape in self.scene.shapes
@@ -240,10 +262,6 @@ class NumpyShader(Shader):
         return iridescence_color * self.iridescence_gain
 
     def _calculate_dome_light(self, normal: NumpyVector3D) -> NumpyRGBColor:
-        """Dome light is an omnidirectional light source that simulates the light coming from the sky.
-        It is used to simulate the ambient light in the scene.
-        We dot the normal with the light direction to get the intensity of the light.
-        """
         light_direction = NumpyVector3D(0, 1, 0)  # from sky
         dome_intensity = 0.0
         dome_color = NumpyRGBColor(1.0, 1.0, 1.0)
@@ -275,10 +293,10 @@ class NumpySphere(Shape):
     def intersect(
         self, ray_origin: NumpyVector3D, normalized_ray_direction: NumpyVector3D
     ):
-        """Cette fonction calcule l'intersection entre un rayon (défini par son origine
-        et sa direction) et une sphère (définie par self.position et self.radius).
-        Elle retourne la distance entre l'origine du rayon et le point d'intersection,
-        ou une valeur spéciale (FARAWAY) si aucune intersection n'existe.
+        """This function calculates the intersection between a ray (defined by its origin
+        and direction) and a sphere (defined by self.position and self.radius).
+        It returns the distance between the ray's origin and the intersection point,
+        or a special value (FARAWAY) if no intersection exists.
         """
         projected_ray_direction = 2 * normalized_ray_direction.dot(
             ray_origin - self.position

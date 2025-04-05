@@ -13,6 +13,11 @@ class RGBColor(Vector3D):
 
 @dataclass
 class Camera:
+    """This object represents the observation point.
+    In a context of transformation from 3D to 2D, the term Camera seems appropriate
+    to include notions of field of view size.
+    """
+
     position: Vector3D
     width: int
     height: int
@@ -20,11 +25,17 @@ class Camera:
 
 @dataclass
 class PointLight:  # TODO: add intensity
+    """A pointLight is a point that emits rays in all directions and is used
+    as a light source."""
+
     position: Vector3D
 
 
 @dataclass
 class DomeLight:
+    """The dome light (or sky light) is an omnidirectional light source that simulates
+    the ambient lighting of an environment."""
+
     intensity: float
     color: RGBColor
 
@@ -41,6 +52,8 @@ class Shape(ABC):
 
 @dataclass
 class Scene3D:
+    """The 3D scene groups together all the 3D elements that will interact with each other."""
+
     shapes: list[Shape]
     lights: list[PointLight]
     camera: Camera
