@@ -23,6 +23,12 @@ class PointLight:  # TODO: add intensity
     position: Vector3D
 
 
+@dataclass
+class DomeLight:
+    intensity: float
+    color: RGBColor
+
+
 class Shape(ABC):
     @abstractmethod
     def intersect(self, ray_origin: Vector3D, normalized_ray_direction: Vector3D):

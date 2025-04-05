@@ -7,7 +7,7 @@ import numpy as np
 from PIL import Image
 
 from ray_tracer.application import Renderer, Shader
-from ray_tracer.domain import Camera, RGBColor, Scene3D, Shape, Vector3D
+from ray_tracer.domain import Camera, DomeLight, RGBColor, Scene3D, Shape, Vector3D
 
 FARAWAY = 1.0e39
 
@@ -84,6 +84,7 @@ class NumpyShader(Shader):
         specular_gain: float,
         specular_roughness: float,
         iridescence_gain: float,
+        diffuse_gain: float,
     ):
         self.shape = shape
         self.ray_tracer = ray_tracer
@@ -95,6 +96,7 @@ class NumpyShader(Shader):
         self.specular_gain = specular_gain
         self.specular_roughness = specular_roughness
         self.iridescence_gain = iridescence_gain
+        self.diffuse_gain = diffuse_gain
 
         self.shader = self.create()
 
@@ -135,6 +137,8 @@ class NumpyShader(Shader):
             normal,
         )
 
+        color += self._calculate_dome_light(normal)
+
         color += (
             self._calculate_phong_specular(
                 normal, direction_to_light, direction_to_ray_origin
@@ -170,6 +174,7 @@ class NumpyShader(Shader):
             self.shape.diffusecolor(intersection_point)
             * diffuse_light_intensity
             * is_in_light
+            * self.diffuse_gain
         )
 
     def _calculate_reflection(
@@ -209,7 +214,7 @@ class NumpyShader(Shader):
         )
 
     def _calculate_ambient_color(self) -> NumpyRGBColor:
-        return NumpyRGBColor(0.05, 0.05, 0.05)
+        return NumpyRGBColor(0.004, 0.004, 0.004)  # minimum black color
 
     def _calculate_iridescence(
         self,
@@ -222,7 +227,6 @@ class NumpyShader(Shader):
         """
         view_angle = np.clip(normal.dot(direction_to_ray_origin), 0.0, 1.0)
 
-        # L'iridescence est plus marquée lorsque l'angle entre la normale et la vue est plus grand (bordures)
         iridescence_factor = (
             np.abs(view_angle - 0.5)
             * 2  # 0.5 is the middle of the angle, it amplifies the effect on the edges
@@ -234,6 +238,24 @@ class NumpyShader(Shader):
         )  # modify z to shift the color
 
         return iridescence_color * self.iridescence_gain
+
+    def _calculate_dome_light(self, normal: NumpyVector3D) -> NumpyRGBColor:
+        """Dome light is an omnidirectional light source that simulates the light coming from the sky.
+        It is used to simulate the ambient light in the scene.
+        We dot the normal with the light direction to get the intensity of the light.
+        """
+        light_direction = NumpyVector3D(0, 1, 0)  # from sky
+        dome_intensity = 0.0
+        dome_color = NumpyRGBColor(1.0, 1.0, 1.0)
+
+        for light in self.scene.lights:
+            if isinstance(light, DomeLight):
+                dome_color = light.color
+                dome_intensity += light.intensity * np.maximum(
+                    normal.dot(light_direction), 0
+                )
+
+        return dome_color * dome_intensity
 
 
 class NumpySphere(Shape):
@@ -353,11 +375,13 @@ class NumpyRenderer(Renderer):
         specular_gain: float = 1.0,
         specular_roughness: float = 0.5,
         iridescence_gain: float = 0.0,
+        diffuse_gain: float = 1.0,
     ) -> None:
         self.reflection_gain = reflection_gain
         self.specular_gain = specular_gain
         self.specular_roughness = specular_roughness
         self.iridescence_gain = iridescence_gain
+        self.diffuse_gain = diffuse_gain
 
     def raytrace_scene(
         self,
@@ -394,6 +418,7 @@ class NumpyRenderer(Renderer):
                     self.specular_gain,
                     self.specular_roughness,
                     self.iridescence_gain,
+                    self.diffuse_gain,
                 ).to_rgb()
 
                 color += computed_color.place(hit)

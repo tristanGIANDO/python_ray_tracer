@@ -2,7 +2,7 @@ import time
 from pathlib import Path
 
 from ray_tracer.application import render_image_pipeline
-from ray_tracer.domain import Camera, PointLight, Scene3D
+from ray_tracer.domain import Camera, DomeLight, PointLight, Scene3D
 from ray_tracer.infrastructure import (
     CheckeredSphere,
     NumpyRenderer,
@@ -12,7 +12,13 @@ from ray_tracer.infrastructure import (
 )
 
 if __name__ == "__main__":
-    renderer = NumpyRenderer(0.0, 1.0, 0.5, 0.1)
+    renderer = NumpyRenderer(
+        reflection_gain=0.0,
+        specular_gain=1.0,
+        specular_roughness=0.5,
+        iridescence_gain=0,
+        diffuse_gain=0,
+    )
 
     scene = Scene3D(
         [
@@ -31,7 +37,10 @@ if __name__ == "__main__":
                 1.0,
             ),
         ],
-        [PointLight(NumpyVector3D(5, 10, -10))],
+        [
+            PointLight(NumpyVector3D(5, 10, -10)),
+            DomeLight(intensity=1.0, color=NumpyRGBColor(0, 0.5, 1)),
+        ],
         Camera(NumpyVector3D(0, 0.35, -2), 400, 300),
     )
 
