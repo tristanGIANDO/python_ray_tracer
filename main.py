@@ -20,14 +20,14 @@ if __name__ == "__main__":
             NumpySphere(
                 NumpyVector3D(0.55, 0.5, 3),
                 1.0,
-                NumpyShader(1.0, 1.0, 0.5, 0.05, 1.0),
+                NumpyShader(0.1, 1.0, 0.5, 0.1, 0),
                 NumpyRGBColor(1, 0, 0.2),
             ),
             NumpySphere(
                 NumpyVector3D(-0.45, 0.1, 1),
                 0.4,
-                NumpyShader(0.0, 0.05, 1.0, 0.0, 0.0),
-                NumpyRGBColor(0.5, 0.5, 0.5),
+                NumpyShader(0.0, 0.05, 0.5, 0.0, 1.0),
+                NumpyRGBColor(1, 0.2, 0.2),
             ),
             CheckeredSphere(
                 NumpyVector3D(0, -99999.5, 0),

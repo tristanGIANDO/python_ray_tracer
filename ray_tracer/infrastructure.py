@@ -141,7 +141,6 @@ class NumpyShader(Shader):
             nudged_intersection_point,
             normal,
             normalized_ray_direction,
-            shape,
             scene,
             ray_tracer,
         )
@@ -205,7 +204,6 @@ class NumpyShader(Shader):
         nudged_intersection_point: NumpyVector3D,
         normal: NumpyVector3D,
         normalized_ray_direction: NumpyVector3D,
-        shape: Shape,
         scene: Scene3D,
         ray_tracer: Renderer,
     ) -> NumpyRGBColor:
@@ -218,7 +216,6 @@ class NumpyShader(Shader):
                 ray_direction,
                 scene,
             )
-            * shape.mirror
             * self.reflection_gain
         )
 
@@ -289,13 +286,11 @@ class NumpySphere(Shape):
         radius: float,
         shader: Shader,
         diffuse: NumpyRGBColor,
-        mirror: float = 0.5,
     ) -> None:
         self.center = center
         self.position = center
         self.radius = radius
         self.diffuse = diffuse
-        self.mirror = mirror
         self.shader = shader
 
     def intersect(
@@ -346,9 +341,8 @@ class NumpyTexturedSphere(NumpySphere):
         center: NumpyVector3D,
         radius: float,
         texture_path: Path,
-        mirror: float = 0.5,
     ) -> None:
-        super().__init__(center, radius, NumpyRGBColor(1, 1, 1), mirror)
+        super().__init__(center, radius, NumpyRGBColor(1, 1, 1))
         image = Image.open(texture_path).convert("RGB")
         self.texture = np.asarray(image) / 255.0
 
