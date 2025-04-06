@@ -7,38 +7,37 @@ from ray_tracer.infrastructure import (
     CheckeredSphere,
     NumpyRenderer,
     NumpyRGBColor,
+    NumpyShader,
     NumpySphere,
     NumpyVector3D,
 )
 
 if __name__ == "__main__":
-    renderer = NumpyRenderer(
-        reflection_gain=0.8,
-        specular_gain=1.0,
-        specular_roughness=0.5,
-        iridescence_gain=0.05,
-        diffuse_gain=1.0,
-    )
+    renderer = NumpyRenderer()
 
     scene = Scene3D(
         [
             NumpySphere(
                 NumpyVector3D(0.55, 0.5, 3),
                 1.0,
-                NumpyRGBColor(1, 0, 1),
+                NumpyShader(1.0, 1.0, 0.5, 0.05, 1.0),
+                NumpyRGBColor(1, 0, 0.2),
             ),
             NumpySphere(
-                NumpyVector3D(-0.45, 0.1, 1), 0.4, NumpyRGBColor(0.5, 0.5, 0.5)
+                NumpyVector3D(-0.45, 0.1, 1),
+                0.4,
+                NumpyShader(0.0, 0.05, 1.0, 0.0, 0.0),
+                NumpyRGBColor(0.5, 0.5, 0.5),
             ),
             CheckeredSphere(
                 NumpyVector3D(0, -99999.5, 0),
                 99999,
+                NumpyShader(1.0, 0.0, 0.0, 0.0, 1.0),
                 NumpyRGBColor(
                     1,
                     1,
                     1,
                 ),
-                1.0,
             ),
         ],
         [
