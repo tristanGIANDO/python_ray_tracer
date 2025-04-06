@@ -82,6 +82,15 @@ class NumpyRGBColor(NumpyVector3D):
     pass
 
 
+class Texture:
+    def __init__(self, color: NumpyRGBColor = NumpyRGBColor(0.5, 0.5, 0.5)) -> None:
+        self.color = color
+
+    def get_color(self, intersection_point: NumpyVectorArray3D) -> NumpyRGBColor:
+        """Returns the color of the texture at the intersection point."""
+        return self.color
+
+
 class NumpyShader(Shader):
     def __init__(
         self,
@@ -90,12 +99,14 @@ class NumpyShader(Shader):
         specular_roughness: float,
         iridescence_gain: float,
         diffuse_gain: float,
+        diffuse_color: Texture,
     ):
         self.reflection_gain = reflection_gain
         self.specular_gain = specular_gain
         self.specular_roughness = specular_roughness
         self.iridescence_gain = iridescence_gain
         self.diffuse_gain = diffuse_gain
+        self.diffuse_color = diffuse_color
 
     def to_rgb(self, shader: Self) -> NumpyRGBColor:
         return NumpyRGBColor(
@@ -134,7 +145,7 @@ class NumpyShader(Shader):
         color = self._calculate_ambient_color()
 
         color += self._calculate_diffuse(
-            intersection_point, normal, direction_to_light, is_in_light, shape
+            intersection_point, normal, direction_to_light, is_in_light
         )
 
         color += self._calculate_reflection(
@@ -188,12 +199,11 @@ class NumpyShader(Shader):
         normal: NumpyVector3D,
         direction_to_light: NumpyVector3D,
         is_in_light: bool,
-        shape: Shape,
     ) -> NumpyRGBColor:
         """Calculates the diffuse color of the shape at the intersection point."""
         diffuse_light_intensity = np.maximum(normal.dot(direction_to_light), 0)
         return (
-            shape.diffusecolor(intersection_point)
+            self.diffuse_color.get_color(intersection_point)
             * diffuse_light_intensity
             * is_in_light
             * self.diffuse_gain
@@ -285,12 +295,10 @@ class NumpySphere(Shape):
         center: NumpyVector3D,
         radius: float,
         shader: Shader,
-        diffuse: NumpyRGBColor,
     ) -> None:
         self.center = center
         self.position = center
         self.radius = radius
-        self.diffuse = diffuse
         self.shader = shader
 
     def intersect(
@@ -379,13 +387,19 @@ class NumpyTexturedSphere(NumpySphere):
         return NumpyRGBColor(r, g, b)
 
 
-class CheckeredSphere(NumpySphere):
-    def diffusecolor(self, intersection_point: NumpyVectorArray3D) -> NumpyRGBColor:
+class TextureChecker(Texture):
+    def __init__(
+        self,
+        color: NumpyRGBColor = NumpyRGBColor(1, 1, 1),
+    ) -> None:
+        pass
+
+    def get_color(self, intersection_point: NumpyVectorArray3D) -> NumpyRGBColor:
         checker = ((intersection_point.x * 2).astype(int) % 2) == (
             (intersection_point.z * 2).astype(int) % 2
         )
 
-        return self.diffuse * checker
+        return NumpyRGBColor(1, 1, 1) * checker
 
 
 class NumpyRenderer(Renderer):
