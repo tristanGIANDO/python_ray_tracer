@@ -1,7 +1,7 @@
 import numbers
 from functools import reduce
 from pathlib import Path
-from typing import Self
+from typing import Any, Self
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -50,7 +50,7 @@ class NumpyVector3D(Vector3D):
     def __sub__(self, other: Self) -> Self:
         return NumpyVector3D(self.x - other.x, self.y - other.y, self.z - other.z)
 
-    def norm(self):  # -> Any:
+    def norm(self) -> Any:
         """Normalizes the vector to have a magnitude of 1."""
         mag = np.sqrt(self.dot(self))
         return self * (1.0 / np.where(mag == 0, 1, mag))
