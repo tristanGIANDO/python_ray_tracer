@@ -48,6 +48,7 @@ class NumpyShader(Shader):
         self.iridescence_gain = iridescence_gain
         self.diffuse_gain = diffuse_gain
         self.diffuse_color = diffuse_color
+        self.specular_ior = 1.5  # default value for glass
 
     def to_rgb(self, shader: Self) -> NumpyRGBColor:
         return NumpyRGBColor(
@@ -93,7 +94,7 @@ class NumpyShader(Shader):
 
         color += self._calculate_dome_light(normal, scene)
 
-        color += self._calculate_phong_specular(normal, direction_to_light, direction_to_ray_origin) * is_in_light
+        color += self._calculate_physical_specular(normal, direction_to_light, direction_to_ray_origin) * is_in_light
 
         color += self._calculate_iridescence(normal, direction_to_ray_origin)
 
@@ -203,72 +204,63 @@ class NumpyShader(Shader):
 
     def _calculate_physical_specular(
         self,
-        normal: np.ndarray,
-        direction_to_light: np.ndarray,
-        direction_to_ray_origin: np.ndarray,
-        base_weight: float = 1.0,
-        base_color: np.ndarray = np.array([1.0, 1.0, 1.0]),
-        specular_weight: float = 1.0,
-        specular_color: np.ndarray = np.array([1.0, 1.0, 1.0]),
-        specular_roughness: float = 0.01,
-        specular_roughness_anisotropy: float = 0.0,
-    ) -> np.ndarray:
-        """Calcule le BRDF spéculaire d’un métal avec Fresnel F82-tint et modèle GGX."""
+        normal: NumpyVector3D,
+        direction_to_light: NumpyVector3D,
+        direction_to_ray_origin: NumpyVector3D,
+    ) -> NumpyRGBColor:
+        """Calcule le terme spéculaire avec un modèle microfacette GGX et la réflexion Fresnel
+        basée sur l'IOR du matériau.
 
-        def normalize(v):
-            return v / (np.linalg.norm(v) + 1e-8)
+        Args:
+            normal (NumpyVector3D): La normale à la surface.
+            direction_to_light (NumpyVector3D): La direction vers la source lumineuse (normalisée).
+            direction_to_ray_origin (NumpyVector3D): La direction vers la caméra ou l’origine du rayon (normalisée).
 
-        def dot(a, b):
-            return np.clip(np.dot(a.flatten(), b.flatten()), 0.0, 1.0)
+        Attributs attendus sur self:
+            - self.specular_roughness: une valeur de rugosité dans [0, 1] (0 = surface parfaitement lisse)
+            - self.specular_gain: gain appliqué au terme spéculaire.
+            - self.specular_ior: indice de réfraction du matériau (pour la Fresnel).
 
-        def F_schlick(mu, F0):
-            return F0 + (1 - F0) * (1 - mu) ** 5
+        Retour:
+            NumpyRGBColor: La couleur spéculaire résultante.
+        """
+        # Normalisation des vecteurs entrants
+        L = direction_to_light.norm()  # direction de la lumière
+        V = direction_to_ray_origin.norm()  # direction de la vue
+        H = (L + V).norm()  # vecteur demi-angle
 
-        def compute_fresnel_F82(mu, F0, F_schlick_bar, F_bar, specular_weight):
-            correction = mu * (1 - mu) ** 6 * mu_bar * (1 - mu_bar) ** 6 * (F_schlick_bar - F_bar)
-            return specular_weight * (F_schlick(mu, F0) - correction)
+        # Calcul des produits scalaires – ils peuvent être scalaires ou des tableaux
+        NdotL = np.clip(normal.dot(L), 0, 1)
+        NdotV = np.clip(normal.dot(V), 0, 1)
+        NdotH = np.clip(normal.dot(H), 0, 1)
+        VdotH = np.clip(V.dot(H), 0, 1)
 
-        def D_GGX(NdotH, alpha):
-            denom = NdotH**2 * (alpha**2 - 1) + 1
-            return (alpha**2) / (np.pi * denom**2 + 1e-8)
+        # ----- Fresnel -----
+        # Calcul du Fresnel au repos F0 à partir de l'IOR (formule pour un diélectrique)
+        F0 = ((self.specular_ior - 1) / (self.specular_ior + 1)) ** 2
+        # Approximation de Schlick pour le terme Fresnel (utilise VdotH comme facteur d'incidence)
+        F = F0 + (1 - F0) * (1 - VdotH) ** 5
 
-        def G_smith(NdotV, NdotL, alpha):
-            def G1(NdotX):
-                a = alpha
-                return 2 * NdotX / (NdotX + np.sqrt(a**2 + (1 - a**2) * NdotX**2 + 1e-8))
+        # ----- Distribution microfacette GGX -----
+        # On définit alpha (le paramètre de rugosité) ; souvent alpha = roughness² pour un comportement plus intuitif.
+        alpha = self.specular_roughness**2
+        # Formule GGX pour la distribution D:
+        # D = alpha² / (π * ((N·H)² (alpha² - 1) + 1)²)
+        denom = NdotH**2 * (alpha**2 - 1) + 1
+        D = (alpha**2) / (np.pi * (denom**2 + 1e-8))  # on ajoute une petite epsilon pour éviter la division par zéro
 
-            return G1(NdotV) * G1(NdotL)
+        # ----- Terme géométrique G (Smith Schlick-GGX) -----
+        def G1(x: NumpyVector3D) -> float:
+            xdotN = np.clip(normal.dot(x), 0, 1)
+            return 2 * xdotN / (xdotN + np.sqrt(alpha**2 + (1 - alpha**2) * (xdotN**2)) + 1e-8)
 
-        normal = np.array(normal.components())
-        direction_to_light = np.array(direction_to_light.components())
-        direction_to_ray_origin = np.array(direction_to_ray_origin.components())
+        G = G1(L) * G1(V)
 
-        # Vecteurs normalisés
-        n = normalize(normal)
-        l = normalize(direction_to_light)
-        v = normalize(direction_to_ray_origin)
+        # ----- Terme spéculaire final -----
+        # Calculer d'abord le terme spéculaire, puis appliquer le masque
+        spec = (F * D * G) / (4 * NdotL * NdotV + 1e-8)
+        # Pour les éléments où NdotL ou NdotV sont nuls (ou négatifs), on force le résultat à zéro.
+        spec = np.where((NdotL <= 0) | (NdotV <= 0), 0, spec)
 
-        # μ = dot(normal, view direction)
-        mu = np.clip(dot(n, v), 0.0, 1.0)
-
-        # F0 = base_weight * base_color
-        F0 = base_weight * base_color
-
-        # F_schlick(μ)
-        F_schlick_mu = F_schlick(mu, F0)
-
-        # Calcul du terme correctif (F82)
-        mu_bar = 1 / 7
-        F_schlick_bar = F_schlick(mu_bar, F0)
-        F_bar = specular_color * F_schlick_bar
-
-        correction_term = mu * (1 - mu) ** 6 * mu_bar * (1 - mu_bar) ** 6 * (F_schlick_bar - F_bar)
-
-        F82 = F_schlick_mu - correction_term
-
-        # Appliquer le poids global
-        F_metal = specular_weight * F82
-
-        x, y, z = np.clip(F_metal, 0.0, 1.0)
-
-        return NumpyRGBColor(x, y, z)
+        # Retourne le résultat multiplié par la couleur blanche et le gain spéculaire.
+        return NumpyRGBColor(1, 1, 1) * spec * self.specular_gain

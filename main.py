@@ -15,12 +15,26 @@ if __name__ == "__main__":
             NumpySphere(
                 NumpyVector3D(0.55, 0.5, 3),
                 1.0,
-                NumpyShader(0.1, 1.0, 0.5, 0.1, 1.0, Texture(NumpyRGBColor(0, 1, 0))),
+                NumpyShader(
+                    reflection_gain=0.0,
+                    specular_gain=1.0,
+                    specular_roughness=0.1,
+                    iridescence_gain=0.0,
+                    diffuse_gain=0.0,
+                    diffuse_color=Texture(NumpyRGBColor(0, 1, 0)),
+                ),
             ),
             NumpySphere(
                 NumpyVector3D(-0.45, 0.1, 1),
                 0.4,
-                NumpyShader(0.0, 0.05, 0.5, 0.0, 1.0, Texture(NumpyRGBColor(1, 0, 0))),
+                NumpyShader(
+                    reflection_gain=0.0,
+                    specular_gain=1.0,
+                    specular_roughness=0.5,
+                    iridescence_gain=0.0,
+                    diffuse_gain=0.0,
+                    diffuse_color=Texture(NumpyRGBColor(1, 0, 0)),
+                ),
             ),
             NumpySphere(
                 NumpyVector3D(0, -99999.5, 0),
@@ -30,7 +44,7 @@ if __name__ == "__main__":
         ],
         [
             PointLight(NumpyVector3D(5, 10, -10)),
-            DomeLight(0.1, NumpyRGBColor(1, 1, 1)),
+            # DomeLight(0.1, NumpyRGBColor(1, 1, 1)),
         ],
         Camera(NumpyVector3D(0, 0.2, -2), int(1920 / 2), int(1080 / 2)),
     )
