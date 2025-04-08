@@ -4,39 +4,34 @@ from pathlib import Path
 from ray_tracer.application import render_image_pipeline
 from ray_tracer.domain import Camera, DomeLight, PointLight, Scene3D
 from ray_tracer.infrastructure import (
-    CheckeredSphere,
     NumpyRenderer,
     NumpyRGBColor,
+    NumpyShader,
     NumpySphere,
     NumpyVector3D,
+    Texture,
+    TextureChecker,
 )
 
 if __name__ == "__main__":
-    renderer = NumpyRenderer(
-        reflection_gain=0.8,
-        specular_gain=1.0,
-        specular_roughness=0.5,
-        iridescence_gain=0.05,
-        diffuse_gain=1.0,
-    )
+    renderer = NumpyRenderer()
 
     scene = Scene3D(
         [
             NumpySphere(
                 NumpyVector3D(0.55, 0.5, 3),
                 1.0,
-                NumpyRGBColor(1, 0, 1),
+                NumpyShader(0.1, 1.0, 0.5, 0.1, 1.0, Texture(NumpyRGBColor(0, 1, 0))),
             ),
-            NumpySphere(NumpyVector3D(-0.45, 0.1, 1), 0.4, NumpyRGBColor(0.5, 0.5, 0.5)),
-            CheckeredSphere(
+            NumpySphere(
+                NumpyVector3D(-0.45, 0.1, 1),
+                0.4,
+                NumpyShader(0.0, 0.05, 0.5, 0.0, 1.0, Texture(NumpyRGBColor(1, 0, 0))),
+            ),
+            NumpySphere(
                 NumpyVector3D(0, -99999.5, 0),
                 99999,
-                NumpyRGBColor(
-                    1,
-                    1,
-                    1,
-                ),
-                1.0,
+                NumpyShader(1.0, 0.0, 0.0, 0.0, 1.0, TextureChecker()),
             ),
         ],
         [
