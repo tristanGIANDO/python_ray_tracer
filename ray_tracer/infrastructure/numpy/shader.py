@@ -208,59 +208,59 @@ class NumpyShader(Shader):
         direction_to_light: NumpyVector3D,
         direction_to_ray_origin: NumpyVector3D,
     ) -> NumpyRGBColor:
-        """Calcule le terme spéculaire avec un modèle microfacette GGX et la réflexion Fresnel
-        basée sur l'IOR du matériau.
+        """Calculates the specular term using a GGX microfacet model and Fresnel reflection
+        based on the material's IOR.
 
         Args:
-            normal (NumpyVector3D): La normale à la surface.
-            direction_to_light (NumpyVector3D): La direction vers la source lumineuse (normalisée).
-            direction_to_ray_origin (NumpyVector3D): La direction vers la caméra ou l’origine du rayon (normalisée).
+            normal (NumpyVector3D): The surface normal.
+            direction_to_light (NumpyVector3D): The direction to the light source (normalized).
+            direction_to_ray_origin (NumpyVector3D): The direction to the camera or ray origin (normalized).
 
-        Attributs attendus sur self:
-            - self.specular_roughness: une valeur de rugosité dans [0, 1] (0 = surface parfaitement lisse)
-            - self.specular_gain: gain appliqué au terme spéculaire.
-            - self.specular_ior: indice de réfraction du matériau (pour la Fresnel).
+        Expected attributes on self:
+            - self.specular_roughness: a roughness value in [0, 1] (0 = perfectly smooth surface).
+            - self.specular_gain: gain applied to the specular term.
+            - self.specular_ior: index of refraction of the material (for Fresnel).
 
-        Retour:
-            NumpyRGBColor: La couleur spéculaire résultante.
+        Returns:
+            NumpyRGBColor: The resulting specular color.
         """
-        # Normalisation des vecteurs entrants
-        L = direction_to_light.norm()  # direction de la lumière
-        V = direction_to_ray_origin.norm()  # direction de la vue
-        H = (L + V).norm()  # vecteur demi-angle
+        # Normalize incoming vectors
+        L = direction_to_light.norm()  # light direction
+        V = direction_to_ray_origin.norm()  # view direction
+        H = (L + V).norm()  # half-angle vector
 
-        # Calcul des produits scalaires – ils peuvent être scalaires ou des tableaux
+        # Compute dot products – these can be scalars or arrays
         NdotL = np.clip(normal.dot(L), 0, 1)
         NdotV = np.clip(normal.dot(V), 0, 1)
         NdotH = np.clip(normal.dot(H), 0, 1)
         VdotH = np.clip(V.dot(H), 0, 1)
 
         # ----- Fresnel -----
-        # Calcul du Fresnel au repos F0 à partir de l'IOR (formule pour un diélectrique)
+        # Compute Fresnel at rest F0 from IOR (formula for a dielectric)
         F0 = ((self.specular_ior - 1) / (self.specular_ior + 1)) ** 2
-        # Approximation de Schlick pour le terme Fresnel (utilise VdotH comme facteur d'incidence)
+        # Schlick's approximation for the Fresnel term (uses VdotH as the incidence factor)
         F = F0 + (1 - F0) * (1 - VdotH) ** 5
 
-        # ----- Distribution microfacette GGX -----
-        # On définit alpha (le paramètre de rugosité) ; souvent alpha = roughness² pour un comportement plus intuitif.
+        # ----- GGX Microfacet Distribution -----
+        # Define alpha (the roughness parameter); often alpha = roughness² for more intuitive behavior.
         alpha = self.specular_roughness**2
-        # Formule GGX pour la distribution D:
+        # GGX formula for the distribution D:
         # D = alpha² / (π * ((N·H)² (alpha² - 1) + 1)²)
         denom = NdotH**2 * (alpha**2 - 1) + 1
-        D = (alpha**2) / (np.pi * (denom**2 + 1e-8))  # on ajoute une petite epsilon pour éviter la division par zéro
+        D = (alpha**2) / (np.pi * (denom**2 + 1e-8))  # add a small epsilon to avoid division by zero
 
-        # ----- Terme géométrique G (Smith Schlick-GGX) -----
+        # ----- Geometric Term G (Smith Schlick-GGX) -----
         def G1(x: NumpyVector3D) -> float:
             xdotN = np.clip(normal.dot(x), 0, 1)
             return 2 * xdotN / (xdotN + np.sqrt(alpha**2 + (1 - alpha**2) * (xdotN**2)) + 1e-8)
 
         G = G1(L) * G1(V)
 
-        # ----- Terme spéculaire final -----
-        # Calculer d'abord le terme spéculaire, puis appliquer le masque
+        # ----- Final Specular Term -----
+        # First calculate the specular term, then apply masking
         spec = (F * D * G) / (4 * NdotL * NdotV + 1e-8)
-        # Pour les éléments où NdotL ou NdotV sont nuls (ou négatifs), on force le résultat à zéro.
+        # For elements where NdotL or NdotV are zero (or negative), force the result to zero.
         spec = np.where((NdotL <= 0) | (NdotV <= 0), 0, spec)
 
-        # Retourne le résultat multiplié par la couleur blanche et le gain spéculaire.
+        # Return the result multiplied by white color and the specular gain.
         return NumpyRGBColor(1, 1, 1) * spec * self.specular_gain
