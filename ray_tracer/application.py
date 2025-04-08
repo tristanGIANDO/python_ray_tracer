@@ -47,8 +47,6 @@ def render_image_pipeline(
 ) -> None:
     normalized_ray_destinations = render_service.get_ray_directions(scene.camera)
 
-    color = render_service.raytrace_scene(
-        scene.camera.position, normalized_ray_destinations, scene
-    )
+    color = render_service.raytrace_scene(scene.camera.position, normalized_ray_destinations, scene)
 
     render_service.save_image(color, scene.camera, output_path)

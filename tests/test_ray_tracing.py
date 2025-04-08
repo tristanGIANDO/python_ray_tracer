@@ -31,9 +31,7 @@ def test_trace_with_light_diffuse() -> None:
 
 
 def test_roughness_low() -> None:
-    sphere = Sphere(
-        Vector3D(0, 0, 0), 1, Vector3D(1, 0, 0), reflection=0.8, roughness=0.2
-    )
+    sphere = Sphere(Vector3D(0, 0, 0), 1, Vector3D(1, 0, 0), reflection=0.8, roughness=0.2)
     light = Light(Vector3D(10, 10, -10), Vector3D(1, 1, 1))
     scene = [sphere]
     lights = [light]
@@ -45,9 +43,7 @@ def test_roughness_low() -> None:
 
 
 def test_roughness_high() -> None:
-    sphere = Sphere(
-        Vector3D(0, 0, 0), 1, Vector3D(1, 0, 0), reflection=0.8, roughness=1.0
-    )
+    sphere = Sphere(Vector3D(0, 0, 0), 1, Vector3D(1, 0, 0), reflection=0.8, roughness=1.0)
     light = Light(Vector3D(10, 10, -10), Vector3D(1, 1, 1))
     scene = [sphere]
     lights = [light]
@@ -58,9 +54,7 @@ def test_roughness_high() -> None:
 
 
 def test_combined_reflection_and_roughness() -> None:
-    sphere = Sphere(
-        Vector3D(0, 0, 0), 1, Vector3D(1, 0, 0), reflection=0.8, roughness=0.5
-    )
+    sphere = Sphere(Vector3D(0, 0, 0), 1, Vector3D(1, 0, 0), reflection=0.8, roughness=0.5)
     light = Light(Vector3D(10, 10, -10), Vector3D(1, 1, 1))
     scene = [sphere]
     lights = [light]
@@ -72,9 +66,7 @@ def test_combined_reflection_and_roughness() -> None:
 
 
 def test_roughness_statistical() -> None:
-    sphere = Sphere(
-        Vector3D(0, 0, 0), 1, Vector3D(1, 0, 0), reflection=0.8, roughness=0.8
-    )
+    sphere = Sphere(Vector3D(0, 0, 0), 1, Vector3D(1, 0, 0), reflection=0.8, roughness=0.8)
     light = Light(Vector3D(10, 10, -10), Vector3D(1, 1, 1))
     scene = [sphere]
     lights = [light]
