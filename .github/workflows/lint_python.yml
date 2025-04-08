@@ -1,0 +1,26 @@
+name: Lint Python code
+
+on:
+  push:
+    branches:
+    - main
+    tags:
+    - '*'
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  Lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+      - name: Install uv
+        run: |
+          pip install uv
+      - name: run pre-commit
+        run: |
+          uv run pre-commit run --all-files
