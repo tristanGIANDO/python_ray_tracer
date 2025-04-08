@@ -126,9 +126,7 @@ class NumpyShader(Shader):
         )
         normal = (intersection_point - self.shape.position) * (1.0 / self.shape.radius)
         direction_to_light = (self.scene.lights[0].position - intersection_point).norm()
-        direction_to_ray_origin = (
-            self.scene.camera.position - intersection_point
-        ).norm()
+        direction_to_ray_origin = (self.scene.camera.position - intersection_point).norm()
         nudged_intersection_point = (
             intersection_point + normal * 0.0001
         )  # to avoid itself
@@ -312,12 +310,8 @@ class NumpySphere(Shape):
         )  # if < 0, no intersection
         discriminator_square_root = np.sqrt(np.maximum(0, discriminator))
 
-        potential_solution_0 = (
-            -projected_ray_direction - discriminator_square_root
-        ) / 2
-        potential_solution_1 = (
-            -projected_ray_direction + discriminator_square_root
-        ) / 2
+        potential_solution_0 = (-projected_ray_direction - discriminator_square_root) / 2
+        potential_solution_1 = (-projected_ray_direction + discriminator_square_root) / 2
 
         solution = np.where(
             (potential_solution_0 > 0) & (potential_solution_0 < potential_solution_1),
@@ -415,7 +409,7 @@ class NumpyRenderer(Renderer):
 
         color = NumpyRGBColor(0, 0, 0)
 
-        for shape, distance in zip(scene.shapes, distances):
+        for shape, distance in zip(scene.shapes, distances, strict=False):
             hit: bool = (nearest_distance != FARAWAY) & (distance == nearest_distance)
 
             if np.any(hit):  # keep only the intersected points
@@ -444,8 +438,7 @@ class NumpyRenderer(Renderer):
         return color
 
     def get_ray_directions(self, camera: Camera) -> np.ndarray:
-        """
-        1. Adjusts the aspect ratio of the camera to fit the image desired size.
+        """1. Adjusts the aspect ratio of the camera to fit the image desired size.
         2. Creates a grid of points in the camera's view frustum (like pixels on a screen).
         3. Normalizes the grid points to create ray directions.
         4. Returns the normalized ray directions.

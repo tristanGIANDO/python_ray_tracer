@@ -1,16 +1,16 @@
 from old_ray_tracer.domain import Light, Sphere
-from old_ray_tracer.ray_tracing import trace
 from old_ray_tracer.domain.vectors import Vector3D
+from old_ray_tracer.ray_tracing import trace
 
 
-def test_trace_no_intersection():
+def test_trace_no_intersection() -> None:
     scene = []
     lights = [Light(Vector3D(10, 10, -10), Vector3D(1, 1, 1))]
     color = trace(Vector3D(0, 0, -5), Vector3D(0, 0, 1).norm(), scene, lights)
     assert color.components() == (0, 0, 0)  # Background color
 
 
-def test_trace_with_intersection():
+def test_trace_with_intersection() -> None:
     sphere = Sphere(Vector3D(0, 0, 0), 1, Vector3D(1, 0, 0), reflection=0.5)
     scene = [sphere]
     lights = [Light(Vector3D(10, 10, -10), Vector3D(1, 1, 1))]
@@ -18,7 +18,7 @@ def test_trace_with_intersection():
     assert color.components()[0] > 0  # The sphere is red
 
 
-def test_trace_with_light_diffuse():
+def test_trace_with_light_diffuse() -> None:
     sphere = Sphere(Vector3D(0, 0, 0), 1, Vector3D(1, 0, 0))
     light = Light(Vector3D(0, 10, -10), Vector3D(1, 1, 1))
     scene = [sphere]
@@ -30,7 +30,7 @@ def test_trace_with_light_diffuse():
     assert color.components()[2] == 0  # No blue
 
 
-def test_roughness_low():
+def test_roughness_low() -> None:
     sphere = Sphere(
         Vector3D(0, 0, 0), 1, Vector3D(1, 0, 0), reflection=0.8, roughness=0.2
     )
@@ -44,7 +44,7 @@ def test_roughness_low():
     assert color.components()[2] == 0  # No blue
 
 
-def test_roughness_high():
+def test_roughness_high() -> None:
     sphere = Sphere(
         Vector3D(0, 0, 0), 1, Vector3D(1, 0, 0), reflection=0.8, roughness=1.0
     )
@@ -57,7 +57,7 @@ def test_roughness_high():
     assert color.components()[0] > 0  # Red should still be present
 
 
-def test_combined_reflection_and_roughness():
+def test_combined_reflection_and_roughness() -> None:
     sphere = Sphere(
         Vector3D(0, 0, 0), 1, Vector3D(1, 0, 0), reflection=0.8, roughness=0.5
     )
@@ -71,7 +71,7 @@ def test_combined_reflection_and_roughness():
     assert color.components()[2] == 0  # No blue
 
 
-def test_roughness_statistical():
+def test_roughness_statistical() -> None:
     sphere = Sphere(
         Vector3D(0, 0, 0), 1, Vector3D(1, 0, 0), reflection=0.8, roughness=0.8
     )

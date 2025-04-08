@@ -6,7 +6,8 @@ from ray_tracer.domain import Camera, RGBColor, Scene3D, Vector3D
 
 class Renderer(ABC):
     """The renderer calculates the direction of the rays to be traced, traces the rays
-    and saves the result."""
+    and saves the result.
+    """
 
     @abstractmethod
     def raytrace_scene(

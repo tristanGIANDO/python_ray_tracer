@@ -1,23 +1,22 @@
 import numpy as np
-
 from old_ray_tracer.domain.vectors import Vector3D
 
 
-def test_vector_addition():
+def test_vector_addition() -> None:
     v1 = Vector3D(1, 2, 3)
     v2 = Vector3D(4, 5, 6)
     result = v1 + v2
     assert result.components() == (5, 7, 9)
 
 
-def test_vector_subtraction():
+def test_vector_subtraction() -> None:
     v1 = Vector3D(5, 7, 9)
     v2 = Vector3D(4, 5, 6)
     result = v1 - v2
     assert result.components() == (1, 2, 3)
 
 
-def test_vector_dot_product():
+def test_vector_dot_product() -> None:
     v1 = Vector3D(1, 0, 0)
     v2 = Vector3D(0, 1, 0)
     assert v1.dot(v2) == 0  # Perpendicular vectors
@@ -26,19 +25,19 @@ def test_vector_dot_product():
     assert v3.dot(v3) == 3  # Dot product with itself is its magnitude squared
 
 
-def test_vector_normalization():
+def test_vector_normalization() -> None:
     v = Vector3D(3, 4, 0)
     norm = v.norm()
     assert np.isclose(norm.components(), (0.6, 0.8, 0)).all()
 
 
-def test_vector_multiplication():
+def test_vector_multiplication() -> None:
     v = Vector3D(1, 2, 3)
     result = v * 2
     assert result.components() == (2, 4, 6)
 
 
-def test_vector_division():
+def test_vector_division() -> None:
     v = Vector3D(2, 4, 6)
     result = v / 2
     assert result.components() == (1, 2, 3)

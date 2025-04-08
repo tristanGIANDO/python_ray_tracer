@@ -50,6 +50,7 @@ ignore = [
   "D105",   #  Missing docstring in magic method
   "D106",   #  Missing docstring in public nested class
   "D107",   #  Missing docstring in `__init__`
+  "D205",   #  Blank line before description
   "ISC001", #  single-line-implicit-string-concatenation (conflict with formatter)
 ]
 

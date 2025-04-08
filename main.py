@@ -27,9 +27,7 @@ if __name__ == "__main__":
                 1.0,
                 NumpyRGBColor(1, 0, 1),
             ),
-            NumpySphere(
-                NumpyVector3D(-0.45, 0.1, 1), 0.4, NumpyRGBColor(0.5, 0.5, 0.5)
-            ),
+            NumpySphere(NumpyVector3D(-0.45, 0.1, 1), 0.4, NumpyRGBColor(0.5, 0.5, 0.5)),
             CheckeredSphere(
                 NumpyVector3D(0, -99999.5, 0),
                 99999,
