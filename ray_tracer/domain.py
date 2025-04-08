@@ -25,16 +25,16 @@ class Camera:
 
 @dataclass
 class PointLight:  # TODO: add intensity
-    """A pointLight is a point that emits rays in all directions and is used
-    as a light source."""
+    """A pointLight is a point that emits rays in all directions and is used as a light source."""
 
     position: Vector3D
 
 
 @dataclass
 class DomeLight:
-    """The dome light (or sky light) is an omnidirectional light source that simulates
-    the ambient lighting of an environment."""
+    """The dome light (or sky light) is an omnidirectional light source that simulates the ambient lighting
+    of an environment.
+    """
 
     intensity: float
     color: RGBColor
@@ -42,7 +42,7 @@ class DomeLight:
 
 class Shape(ABC):
     @abstractmethod
-    def intersect(self, ray_origin: Vector3D, normalized_ray_direction: Vector3D):
+    def intersect(self, ray_origin: Vector3D, normalized_ray_direction: Vector3D) -> None:
         pass
 
     @abstractmethod
