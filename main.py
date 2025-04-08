@@ -3,13 +3,9 @@ from pathlib import Path
 
 from ray_tracer.application import render_image_pipeline
 from ray_tracer.domain import Camera, DomeLight, PointLight, Scene3D
+from ray_tracer.infrastructure.numpy.base import NumpyRenderer, NumpyVector3D
 from ray_tracer.infrastructure.numpy.shader import NumpyShader, Texture, TextureChecker
-from ray_tracer.infrastructure.numpy.shape import (
-    NumpyRenderer,
-    NumpyRGBColor,
-    NumpySphere,
-    NumpyVector3D,
-)
+from ray_tracer.infrastructure.numpy.shape import NumpyRGBColor, NumpySphere
 
 if __name__ == "__main__":
     renderer = NumpyRenderer()
