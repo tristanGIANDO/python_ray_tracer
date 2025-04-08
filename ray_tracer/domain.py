@@ -32,7 +32,9 @@ class PointLight:  # TODO: add intensity
 
 @dataclass
 class DomeLight:
-    """The dome light (or sky light) is an omnidirectional light source that simulates the ambient lighting of an environment."""
+    """The dome light (or sky light) is an omnidirectional light source that simulates the ambient lighting
+    of an environment.
+    """
 
     intensity: float
     color: RGBColor

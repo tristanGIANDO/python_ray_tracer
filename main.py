@@ -45,4 +45,4 @@ if __name__ == "__main__":
 
     start_time = time.time()
     render_image_pipeline(scene, output_path, renderer)
-    print("Took", time.time() - start_time)
+    print("Took", time.time() - start_time)  # noqa: T201
