@@ -16,21 +16,21 @@ if __name__ == "__main__":
                 NumpyVector3D(0.55, 0.5, 3),
                 1.0,
                 NumpyShader(
-                    reflection_gain=0.0,
-                    specular_gain=1.0,
-                    specular_roughness=0.1,
-                    iridescence_gain=0.0,
-                    diffuse_gain=0.0,
-                    diffuse_color=Texture(NumpyRGBColor(0, 1, 0)),
+                    reflection_gain=0,
+                    specular_gain=5.0,
+                    specular_roughness=0.3,
+                    iridescence_gain=1.0,
+                    diffuse_gain=0.1,
+                    diffuse_color=Texture(NumpyRGBColor(1, 1, 1)),
                 ),
             ),
             NumpySphere(
                 NumpyVector3D(-0.45, 0.1, 1),
                 0.4,
                 NumpyShader(
-                    reflection_gain=0.0,
-                    specular_gain=1.0,
-                    specular_roughness=0.5,
+                    reflection_gain=0.1,
+                    specular_gain=3.0,
+                    specular_roughness=0.3,
                     iridescence_gain=0.0,
                     diffuse_gain=0.0,
                     diffuse_color=Texture(NumpyRGBColor(1, 0, 0)),
@@ -39,17 +39,17 @@ if __name__ == "__main__":
             NumpySphere(
                 NumpyVector3D(0, -99999.5, 0),
                 99999,
-                NumpyShader(1.0, 0.0, 0.0, 0.0, 1.0, TextureChecker()),
+                NumpyShader(1.0, 1.0, 0.5, 0.0, 1.0, TextureChecker()),
             ),
         ],
         [
-            PointLight(NumpyVector3D(5, 10, -10)),
-            # DomeLight(0.1, NumpyRGBColor(1, 1, 1)),
+            PointLight(NumpyVector3D(3, 5, 0)),
+            DomeLight(0.1, NumpyRGBColor(1, 1, 1)),
         ],
         Camera(NumpyVector3D(0, 0.2, -2), int(1920 / 2), int(1080 / 2)),
     )
 
-    output_path = Path("render.png")
+    output_path = Path("render2.png")
 
     start_time = time.time()
     render_image_pipeline(scene, output_path, renderer)

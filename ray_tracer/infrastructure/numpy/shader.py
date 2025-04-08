@@ -49,6 +49,9 @@ class NumpyShader(Shader):
         self.diffuse_gain = diffuse_gain
         self.diffuse_color = diffuse_color
         self.specular_ior = 1.5  # default value for glass
+        self.thin_film_weight = 0.1  # range [0, 1]
+        self.thin_film_thickness = 0.3  # range [0, 1]
+        self.thin_film_ior = 1.4  # range [1, 3]
 
     def to_rgb(self, shader: Self) -> NumpyRGBColor:
         return NumpyRGBColor(
@@ -96,7 +99,7 @@ class NumpyShader(Shader):
 
         color += self._calculate_physical_specular(normal, direction_to_light, direction_to_ray_origin) * is_in_light
 
-        color += self._calculate_iridescence(normal, direction_to_ray_origin)
+        color += self._calculate_physical_iridescence(normal, direction_to_ray_origin)
 
         return color
 
@@ -170,25 +173,52 @@ class NumpyShader(Shader):
     def _calculate_ambient_color(self) -> NumpyRGBColor:
         return NumpyRGBColor(0.004, 0.004, 0.004)  # minimum black color
 
-    def _calculate_iridescence(
+    def _calculate_physical_iridescence(
         self,
         normal: NumpyVector3D,
         direction_to_ray_origin: NumpyVector3D,
     ) -> NumpyRGBColor:
-        """Irisdescence effect based on the angle between the normal and the direction to the ray origin.
-        The more the angle is close to 90 degrees, the more the iridescence effect is visible.
-        The iridescence effect is more pronounced at the edges of the object.
+        """Calculates an iridescence color based on thin-film interference,
+        incorporating three parameters:
+            - thin_film_weight: the weight (coverage) that blends the film effect with the base,
+            - thin_film_thickness: the thickness of the film, affecting the spacing of the fringes,
+            - thin_film_ior: the refractive index of the film, influencing the hue of the fringes.
+
+        The effect is achieved by modulating a sinusoidal oscillation (simulating interference)
+        based on the angle between the normal and the direction to the ray origin.
         """
+        # Calculate the viewing angle, in [0,1]
         view_angle = np.clip(normal.dot(direction_to_ray_origin), 0.0, 1.0)
 
-        iridescence_factor = (
-            np.abs(view_angle - 0.5) * 2  # 0.5 is the middle of the angle, it amplifies the effect on the edges
-        )
+        # An angular factor centered around 0.5 to enhance the effect at the edges
+        angle_factor = np.abs(view_angle - 0.5) * 2.0
 
-        color_variation = np.sin(iridescence_factor * np.pi)
-        iridescence_color = NumpyRGBColor(color_variation, 1 - color_variation, 0.5)  # modify z to shift the color
+        # Use the thickness to adjust the frequency of the fringes:
+        # Multiply by π and an arbitrary factor (here 10) to highlight oscillations.
+        phase = angle_factor * np.pi * self.thin_film_thickness * 10.0
 
-        return iridescence_color * self.iridescence_gain
+        # The interference pattern oscillates between -1 and 1
+        interference_pattern = np.sin(phase)
+
+        # The refractive index influences the hue. Here, thin_film_ior is mapped from [1,3] to a factor [0,1]
+        # which will be used to vary the red and green components.
+        hue_shift = (self.thin_film_ior - 1.0) / 2.0
+
+        # Construct a fringe color whose intensity varies with the interference and the index:
+        # - The red component is boosted when hue_shift is high,
+        # - The green component is complemented inversely,
+        # - The blue component is positioned around 0.5 and modulated by the interference.
+        r = interference_pattern * hue_shift + (1.0 - hue_shift) * (1.0 - interference_pattern)
+        g = interference_pattern * (1.0 - hue_shift) + hue_shift * (1.0 - interference_pattern)
+        b = 0.5 + 0.5 * interference_pattern
+
+        film_color = NumpyRGBColor(r, g, b)
+
+        # The film weight allows blending between the film result (with iridescent effect) and the base BSDF (considered neutral here, e.g., white)
+        blended_color = film_color * self.thin_film_weight
+
+        # Return the final color weighted by a global iridescence gain
+        return blended_color * self.iridescence_gain
 
     def _calculate_dome_light(self, normal: NumpyVector3D, scene: Scene3D) -> NumpyRGBColor:
         light_direction = NumpyVector3D(0, 1, 0)  # from sky
