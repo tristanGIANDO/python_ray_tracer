@@ -21,7 +21,7 @@ if __name__ == "__main__":
             NumpySphere(
                 NumpyVector3D(0.55, 0.5, 3),
                 1.0,
-                NumpyShader(0.1, 1.0, 0.5, 0.1, 1.0, TextureChecker()),
+                NumpyShader(0.1, 1.0, 0.5, 0.1, 1.0, Texture(NumpyRGBColor(0, 1, 0))),
             ),
             NumpySphere(
                 NumpyVector3D(-0.45, 0.1, 1),
