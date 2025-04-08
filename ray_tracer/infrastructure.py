@@ -80,7 +80,7 @@ class NumpyRGBColor(NumpyVector3D):
 
 
 class Texture:
-    def __init__(self, color: NumpyRGBColor | None) -> None:
+    def __init__(self, color: NumpyRGBColor | None = None) -> None:
         self.color = color if color is not None else NumpyRGBColor(1, 1, 1)
 
     def get_color(self, intersection_point: NumpyVectorArray3D) -> NumpyRGBColor:
@@ -123,9 +123,9 @@ class NumpyShader(Shader):
     ) -> NumpyVector3D:
         """This is the main function that will be called to compute the color of the pixel."""
         intersection_point = ray_origin + normalized_ray_direction * distance_origin_to_intersection
-        normal = (intersection_point - self.shape.position) * (1.0 / self.shape.radius)
-        direction_to_light = (self.scene.lights[0].position - intersection_point).norm()
-        direction_to_ray_origin = (self.scene.camera.position - intersection_point).norm()
+        normal = (intersection_point - shape.position) * (1.0 / shape.radius)
+        direction_to_light = (scene.lights[0].position - intersection_point).norm()
+        direction_to_ray_origin = (scene.camera.position - intersection_point).norm()
         nudged_intersection_point = intersection_point + normal * 0.0001  # to avoid itself
 
         is_in_light = self._calculate_shadow(
@@ -257,6 +257,78 @@ class NumpyShader(Shader):
 
         return dome_color * dome_intensity
 
+    def _calculate_physical_specular(
+        self,
+        normal: np.ndarray,
+        direction_to_light: np.ndarray,
+        direction_to_ray_origin: np.ndarray,
+        base_weight: float = 1.0,
+        base_color: np.ndarray = np.array([1.0, 1.0, 1.0]),
+        specular_weight: float = 1.0,
+        specular_color: np.ndarray = np.array([1.0, 1.0, 1.0]),
+        specular_roughness: float = 0.01,
+        specular_roughness_anisotropy: float = 0.0,
+    ) -> np.ndarray:
+        """Calcule le BRDF spéculaire d’un métal avec Fresnel F82-tint et modèle GGX."""
+
+        def normalize(v):
+            return v / (np.linalg.norm(v) + 1e-8)
+
+        def dot(a, b):
+            return np.clip(np.dot(a.flatten(), b.flatten()), 0.0, 1.0)
+
+        def F_schlick(mu, F0):
+            return F0 + (1 - F0) * (1 - mu) ** 5
+
+        def compute_fresnel_F82(mu, F0, F_schlick_bar, F_bar, specular_weight):
+            correction = mu * (1 - mu) ** 6 * mu_bar * (1 - mu_bar) ** 6 * (F_schlick_bar - F_bar)
+            return specular_weight * (F_schlick(mu, F0) - correction)
+
+        def D_GGX(NdotH, alpha):
+            denom = NdotH**2 * (alpha**2 - 1) + 1
+            return (alpha**2) / (np.pi * denom**2 + 1e-8)
+
+        def G_smith(NdotV, NdotL, alpha):
+            def G1(NdotX):
+                a = alpha
+                return 2 * NdotX / (NdotX + np.sqrt(a**2 + (1 - a**2) * NdotX**2 + 1e-8))
+
+            return G1(NdotV) * G1(NdotL)
+
+        normal = np.array(normal.components())
+        direction_to_light = np.array(direction_to_light.components())
+        direction_to_ray_origin = np.array(direction_to_ray_origin.components())
+
+        # Vecteurs normalisés
+        n = normalize(normal)
+        l = normalize(direction_to_light)
+        v = normalize(direction_to_ray_origin)
+
+        # μ = dot(normal, view direction)
+        mu = np.clip(dot(n, v), 0.0, 1.0)
+
+        # F0 = base_weight * base_color
+        F0 = base_weight * base_color
+
+        # F_schlick(μ)
+        F_schlick_mu = F_schlick(mu, F0)
+
+        # Calcul du terme correctif (F82)
+        mu_bar = 1 / 7
+        F_schlick_bar = F_schlick(mu_bar, F0)
+        F_bar = specular_color * F_schlick_bar
+
+        correction_term = mu * (1 - mu) ** 6 * mu_bar * (1 - mu_bar) ** 6 * (F_schlick_bar - F_bar)
+
+        F82 = F_schlick_mu - correction_term
+
+        # Appliquer le poids global
+        F_metal = specular_weight * F82
+
+        x, y, z = np.clip(F_metal, 0.0, 1.0)
+
+        return NumpyRGBColor(x, y, z)
+
 
 class NumpySphere(Shape):
     def __init__(
@@ -340,7 +412,7 @@ class TextureChecker(Texture):
         self,
         color: NumpyRGBColor | None = None,
     ) -> None:
-        pass
+        self.color = color if color is not None else NumpyRGBColor(1, 1, 1)
 
     def get_color(self, intersection_point: NumpyVectorArray3D) -> NumpyRGBColor:
         checker = ((intersection_point.x * 2).astype(int) % 2) == ((intersection_point.z * 2).astype(int) % 2)
