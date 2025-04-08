@@ -48,7 +48,7 @@ class NumpyShader(Shader):
         self.iridescence_gain = iridescence_gain
         self.diffuse_gain = diffuse_gain
         self.diffuse_color = diffuse_color
-        self.specular_ior = 1.5  # default value for glass
+        self.specular_ior = 5  # default value for glass
         self.thin_film_weight = 0.1  # range [0, 1]
         self.thin_film_thickness = 0.3  # range [0, 1]
         self.thin_film_ior = 1.4  # range [1, 3]
@@ -238,46 +238,49 @@ class NumpyShader(Shader):
         direction_to_light: NumpyVector3D,
         direction_to_ray_origin: NumpyVector3D,
     ) -> NumpyRGBColor:
-        """Calculates the specular term using a GGX microfacet model and Fresnel reflection
-        based on the material's IOR.
+        """Calculates the specular term using a GGX microfacet model and Fresnel reflection.
+
+        This version, adapted for materials like chrome, computes the specular contribution
+        for all parts of the surface visible to the camera, even in the absence of direct lighting via NdotL.
+        NdotL is removed from the denominator to ensure the reflection is always calculated.
 
         Args:
-            normal (NumpyVector3D): The surface normal.
-            direction_to_light (NumpyVector3D): The direction to the light source (normalized).
-            direction_to_ray_origin (NumpyVector3D): The direction to the camera or ray origin (normalized).
+            normal (NumpyVector3D): the surface normal.
+            direction_to_light (NumpyVector3D): the (normalized) direction to the light source.
+            direction_to_ray_origin (NumpyVector3D): the (normalized) direction to the camera.
 
         Expected attributes on self:
-            - self.specular_roughness: a roughness value in [0, 1] (0 = perfectly smooth surface).
+            - self.specular_roughness: value in [0, 1] (0 = perfectly smooth surface).
             - self.specular_gain: gain applied to the specular term.
-            - self.specular_ior: index of refraction of the material (for Fresnel).
+            - self.specular_ior: refractive index of the material (used for Fresnel if non-metallic).
+            - self.is_metallic (optional): boolean indicating if the material is metallic.
+            - self.specular_color (optional): if metallic, base color of the specular (e.g., [0.95, 0.95, 0.95] for chrome).
 
         Returns:
-            NumpyRGBColor: The resulting specular color.
+            NumpyRGBColor: the resulting specular color.
         """
         # Normalize incoming vectors
-        L = direction_to_light.norm()  # light direction
-        V = direction_to_ray_origin.norm()  # view direction
+        L = direction_to_light.norm()  # direction to the light
+        V = direction_to_ray_origin.norm()  # direction to the camera
         H = (L + V).norm()  # half-angle vector
 
-        # Compute dot products – these can be scalars or arrays
-        NdotL = np.clip(normal.dot(L), 0, 1)
+        # Compute dot products
+        # Keep the camera clip to avoid computation when the surface is not oriented toward the view
         NdotV = np.clip(normal.dot(V), 0, 1)
         NdotH = np.clip(normal.dot(H), 0, 1)
         VdotH = np.clip(V.dot(H), 0, 1)
 
         # ----- Fresnel -----
-        # Compute Fresnel at rest F0 from IOR (formula for a dielectric)
+        # For a non-metallic material, F0 is derived from the refractive index
         F0 = ((self.specular_ior - 1) / (self.specular_ior + 1)) ** 2
-        # Schlick's approximation for the Fresnel term (uses VdotH as the incidence factor)
+        # Schlick's approximation for Fresnel
         F = F0 + (1 - F0) * (1 - VdotH) ** 5
 
         # ----- GGX Microfacet Distribution -----
-        # Define alpha (the roughness parameter); often alpha = roughness² for more intuitive behavior.
+        # Define alpha as the square of roughness for more intuitive behavior
         alpha = self.specular_roughness**2
-        # GGX formula for the distribution D:
-        # D = alpha² / (π * ((N·H)² (alpha² - 1) + 1)²)
         denom = NdotH**2 * (alpha**2 - 1) + 1
-        D = (alpha**2) / (np.pi * (denom**2 + 1e-8))  # add a small epsilon to avoid division by zero
+        D = (alpha**2) / (np.pi * (denom**2 + 1e-8))
 
         # ----- Geometric Term G (Smith Schlick-GGX) -----
         def G1(x: NumpyVector3D) -> float:
@@ -286,11 +289,11 @@ class NumpyShader(Shader):
 
         G = G1(L) * G1(V)
 
-        # ----- Final Specular Term -----
-        # First calculate the specular term, then apply masking
-        spec = (F * D * G) / (4 * NdotL * NdotV + 1e-8)
-        # For elements where NdotL or NdotV are zero (or negative), force the result to zero.
-        spec = np.where((NdotL <= 0) | (NdotV <= 0), 0, spec)
+        # ----- Final Specular Calculation -----
+        # Note: NdotL is removed from the denominator so the calculation is done for the entire surface
+        spec = (F * D * G) / (4 * NdotV + 1e-8)
 
-        # Return the result multiplied by white color and the specular gain.
+        # Mask the result only if the surface is not oriented toward the camera (NdotV <= 0)
+        spec = np.where(NdotV <= 0, 0, spec)
+
         return NumpyRGBColor(1, 1, 1) * spec * self.specular_gain
