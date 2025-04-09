@@ -48,7 +48,7 @@ class NumpyShader(Shader):
         self.iridescence_gain = iridescence_gain
         self.diffuse_gain = diffuse_gain
         self.diffuse_color = diffuse_color
-        self.specular_ior = 5  # default value for glass
+        self.specular_ior = 1.5  # default value for glass
         self.thin_film_weight = 0.1  # range [0, 1]
         self.thin_film_thickness = 0.3  # range [0, 1]
         self.thin_film_ior = 1.4  # range [1, 3]
@@ -132,7 +132,7 @@ class NumpyShader(Shader):
             self.diffuse_color.get_color(intersection_point) * diffuse_light_intensity * is_in_light * self.diffuse_gain
         )
 
-    def _calculate_reflection(
+    def _calculate_reflection(  #TODO: VOIR TRANSMISSION
         self,
         nudged_intersection_point: NumpyVector3D,
         normal: NumpyVector3D,
@@ -173,7 +173,7 @@ class NumpyShader(Shader):
     def _calculate_ambient_color(self) -> NumpyRGBColor:
         return NumpyRGBColor(0.004, 0.004, 0.004)  # minimum black color
 
-    def _calculate_physical_iridescence(
+    def _calculate_physical_iridescence(  #TODO: NE SE VOIT QUE DANS LE SPECULAIRE!
         self,
         normal: NumpyVector3D,
         direction_to_ray_origin: NumpyVector3D,
@@ -237,63 +237,77 @@ class NumpyShader(Shader):
         normal: NumpyVector3D,
         direction_to_light: NumpyVector3D,
         direction_to_ray_origin: NumpyVector3D,
-    ) -> NumpyRGBColor:
-        """Calculates the specular term using a GGX microfacet model and Fresnel reflection.
+        ) -> NumpyRGBColor:
+        """
+        Calcule le terme spéculaire en combinant un modèle microfacettes GGX (avec Fresnel)
+        et un boost de glint aux bords, visible uniquement si la lumière (domeLight ou équivalent)
+        éclaire la surface.
 
-        This version, adapted for materials like chrome, computes the specular contribution
-        for all parts of the surface visible to the camera, even in the absence of direct lighting via NdotL.
-        NdotL is removed from the denominator to ensure the reflection is always calculated.
+        Le glint est modulé par l'intensité lumineuse incidente (via NdotL), de sorte que,
+        en l'absence de lumière, il ne s'ajoute pas même si l'angle de vue est glancing.
 
         Args:
-            normal (NumpyVector3D): the surface normal.
-            direction_to_light (NumpyVector3D): the (normalized) direction to the light source.
-            direction_to_ray_origin (NumpyVector3D): the (normalized) direction to the camera.
+            normal (NumpyVector3D): la normale à la surface.
+            direction_to_light (NumpyVector3D): la direction (normalisée) vers la source de lumière.
+            direction_to_ray_origin (NumpyVector3D): la direction (normalisée) vers la caméra.
 
-        Expected attributes on self:
-            - self.specular_roughness: value in [0, 1] (0 = perfectly smooth surface).
-            - self.specular_gain: gain applied to the specular term.
-            - self.specular_ior: refractive index of the material (used for Fresnel if non-metallic).
-            - self.is_metallic (optional): boolean indicating if the material is metallic.
-            - self.specular_color (optional): if metallic, base color of the specular (e.g., [0.95, 0.95, 0.95] for chrome).
+        Attributs attendus sur self:
+            - self.specular_roughness: valeur dans [0, 1] (0 = surface parfaitement lisse).
+            - self.specular_gain: gain appliqué au terme spéculaire.
+            - self.specular_ior: indice de réfraction du matériau (pour Fresnel si non métallique).
+            - self.is_metallic (optionnel): booléen indiquant si le matériau est métallique.
+            - self.specular_color (optionnel): couleur de base du spéculaire pour les matériaux métalliques.
+            - self.specular_glint_gain (optionnel): gain spécifique pour ajuster la contribution du glint.
 
         Returns:
-            NumpyRGBColor: the resulting specular color.
+            NumpyRGBColor: la couleur spéculaire résultante.
         """
-        # Normalize incoming vectors
-        L = direction_to_light.norm()  # direction to the light
-        V = direction_to_ray_origin.norm()  # direction to the camera
-        H = (L + V).norm()  # half-angle vector
+        eps = 1e-8  # Petite constante pour éviter la division par zéro.
 
-        # Compute dot products
-        # Keep the camera clip to avoid computation when the surface is not oriented toward the view
+        # Normalisation des vecteurs
+        L = direction_to_light.norm()           # Direction vers la lumière.
+        V = direction_to_ray_origin.norm()        # Direction vers la caméra.
+        H = (L + V).norm()                        # Vecteur milieu.
+
+        # Calcul des produits scalaires nécessaires
         NdotV = np.clip(normal.dot(V), 0, 1)
         NdotH = np.clip(normal.dot(H), 0, 1)
         VdotH = np.clip(V.dot(H), 0, 1)
+        # Calcul de l'intensité lumineuse incidente (ici utilisée pour conditionner le glint)
+        NdotL = np.clip(normal.dot(L), 0, 1)
 
-        # ----- Fresnel -----
-        # For a non-metallic material, F0 is derived from the refractive index
+        # ---- Fresnel (Schlick) ----
         F0 = ((self.specular_ior - 1) / (self.specular_ior + 1)) ** 2
-        # Schlick's approximation for Fresnel
         F = F0 + (1 - F0) * (1 - VdotH) ** 5
 
-        # ----- GGX Microfacet Distribution -----
-        # Define alpha as the square of roughness for more intuitive behavior
-        alpha = self.specular_roughness**2
-        denom = NdotH**2 * (alpha**2 - 1) + 1
-        D = (alpha**2) / (np.pi * (denom**2 + 1e-8))
+        # ---- Distribution GGX des microfacettes ----
+        alpha = self.specular_roughness ** 2  # Le roughness au carré pour une réponse plus intuitive.
+        denom = (NdotH**2 * (alpha**2 - 1) + 1)
+        D = (alpha**2) / (np.pi * (denom**2 + eps))
 
-        # ----- Geometric Term G (Smith Schlick-GGX) -----
+        # ---- Terme Géométrique G (Smith Schlick-GGX) ----
         def G1(x: NumpyVector3D) -> float:
             xdotN = np.clip(normal.dot(x), 0, 1)
-            return 2 * xdotN / (xdotN + np.sqrt(alpha**2 + (1 - alpha**2) * (xdotN**2)) + 1e-8)
+            return 2 * xdotN / (xdotN + np.sqrt(alpha**2 + (1 - alpha**2) * (xdotN**2)) + eps)
 
         G = G1(L) * G1(V)
 
-        # ----- Final Specular Calculation -----
-        # Note: NdotL is removed from the denominator so the calculation is done for the entire surface
-        spec = (F * D * G) / (4 * NdotV + 1e-8)
+        # ---- Composante spéculaire de base ----
+        spec_base = (F * D * G) / (4 * NdotV + eps)
 
-        # Mask the result only if the surface is not oriented toward the camera (NdotV <= 0)
-        spec = np.where(NdotV <= 0, 0, spec)
+        # ---- Calcul du glint (edge highlight conditionné par la lumière) ----
+        glint_exponent = 2.5  # Exposant ajustable pour moduler la décroissance du glint en fonction de l'angle.
+        glint = (1 - NdotV) ** glint_exponent
+        # On ne voit le glint que si la lumière l'éclaire, on le module donc par NdotL.
+        glint *= NdotL
+        glint_gain = getattr(self, "specular_glint_gain", 1.0)
 
-        return NumpyRGBColor(1, 1, 1) * spec * self.specular_gain
+        # ---- Combinaison finale ----
+        spec_final = spec_base + glint_gain * glint
+
+        # Masquage de la contribution si la surface n'est pas orientée vers la caméra.
+        spec_final = np.where(NdotV <= 0, 0, spec_final)
+
+        # Application de la couleur et du gain global.
+        return NumpyRGBColor(1, 1, 1) * spec_final * self.specular_gain
+

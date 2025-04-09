@@ -18,7 +18,7 @@ if __name__ == "__main__":
                 NumpyShader(
                     reflection_gain=0,
                     specular_gain=1.0,
-                    specular_roughness=0.3,
+                    specular_roughness=0.01,
                     iridescence_gain=1.0,
                     diffuse_gain=0.0,
                     diffuse_color=Texture(NumpyRGBColor(1, 1, 1)),
@@ -28,7 +28,7 @@ if __name__ == "__main__":
                 NumpyVector3D(-0.45, 0.1, 1),
                 0.4,
                 NumpyShader(
-                    reflection_gain=0.1,
+                    reflection_gain=0.0,
                     specular_gain=1.0,
                     specular_roughness=0.1,
                     iridescence_gain=0.0,
@@ -44,7 +44,7 @@ if __name__ == "__main__":
         ],
         [
             PointLight(NumpyVector3D(-5, 5, -10)),
-            DomeLight(0.01, NumpyRGBColor(1, 1, 1)),
+            DomeLight(1.0, NumpyRGBColor(1, 1, 1)),
         ],
         Camera(NumpyVector3D(0, 0.2, -2), int(1920 / 2), int(1080 / 2)),
     )
