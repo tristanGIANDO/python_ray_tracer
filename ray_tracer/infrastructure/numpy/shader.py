@@ -87,7 +87,7 @@ class NumpyShader(Shader):
 
         color += self._calculate_diffuse(intersection_point, normal, direction_to_light, is_in_light)
 
-        color += self._calculate_reflection(
+        reflection = self._calculate_reflection(
             nudged_intersection_point,
             normal,
             normalized_ray_direction,
@@ -97,7 +97,19 @@ class NumpyShader(Shader):
 
         color += self._calculate_dome_light(normal, scene)
 
-        color += self._calculate_physical_specular(normal, direction_to_light, direction_to_ray_origin) * is_in_light
+        specular = self._calculate_physical_specular(
+            normal,
+            direction_to_light,
+            direction_to_ray_origin,
+        )
+
+        # print(type(reflection.x), type(specular.x))
+        # print("color before", color.x)
+        # color += specular * reflection
+        color += specular * is_in_light
+        # print("color after", color.x)
+
+        color += reflection * self.reflection_gain
 
         color += self._calculate_physical_iridescence(normal, direction_to_ray_origin)
 
@@ -132,7 +144,7 @@ class NumpyShader(Shader):
             self.diffuse_color.get_color(intersection_point) * diffuse_light_intensity * is_in_light * self.diffuse_gain
         )
 
-    def _calculate_reflection(  #TODO: VOIR TRANSMISSION
+    def _calculate_reflection(  # TODO: VOIR TRANSMISSION
         self,
         nudged_intersection_point: NumpyVector3D,
         normal: NumpyVector3D,
@@ -141,13 +153,15 @@ class NumpyShader(Shader):
         ray_tracer: Renderer,
     ) -> NumpyRGBColor:
         ray_direction = (normalized_ray_direction - normal * 2 * normalized_ray_direction.dot(normal)).norm()
-        return (
-            ray_tracer.raytrace_scene(
-                nudged_intersection_point,
-                ray_direction,
-                scene,
-            )
-            * self.reflection_gain
+        color = ray_tracer.raytrace_scene(
+            nudged_intersection_point,
+            ray_direction,
+            scene,
+        )
+        return NumpyRGBColor(
+            np.array(color.x),
+            np.array(color.y),
+            np.array(color.z),
         )
 
     def _calculate_phong_specular(
@@ -173,7 +187,7 @@ class NumpyShader(Shader):
     def _calculate_ambient_color(self) -> NumpyRGBColor:
         return NumpyRGBColor(0.004, 0.004, 0.004)  # minimum black color
 
-    def _calculate_physical_iridescence(  #TODO: NE SE VOIT QUE DANS LE SPECULAIRE!
+    def _calculate_physical_iridescence(  # TODO: NE SE VOIT QUE DANS LE SPECULAIRE!
         self,
         normal: NumpyVector3D,
         direction_to_ray_origin: NumpyVector3D,
@@ -237,9 +251,8 @@ class NumpyShader(Shader):
         normal: NumpyVector3D,
         direction_to_light: NumpyVector3D,
         direction_to_ray_origin: NumpyVector3D,
-        ) -> NumpyRGBColor:
-        """
-        Calcule le terme spéculaire en combinant un modèle microfacettes GGX (avec Fresnel)
+    ) -> NumpyRGBColor:
+        """Calcule le terme spéculaire en combinant un modèle microfacettes GGX (avec Fresnel)
         et un boost de glint aux bords, visible uniquement si la lumière (domeLight ou équivalent)
         éclaire la surface.
 
@@ -265,9 +278,9 @@ class NumpyShader(Shader):
         eps = 1e-8  # Petite constante pour éviter la division par zéro.
 
         # Normalisation des vecteurs
-        L = direction_to_light.norm()           # Direction vers la lumière.
-        V = direction_to_ray_origin.norm()        # Direction vers la caméra.
-        H = (L + V).norm()                        # Vecteur milieu.
+        L = direction_to_light.norm()  # Direction vers la lumière.
+        V = direction_to_ray_origin.norm()  # Direction vers la caméra.
+        H = (L + V).norm()  # Vecteur milieu.
 
         # Calcul des produits scalaires nécessaires
         NdotV = np.clip(normal.dot(V), 0, 1)
@@ -281,8 +294,8 @@ class NumpyShader(Shader):
         F = F0 + (1 - F0) * (1 - VdotH) ** 5
 
         # ---- Distribution GGX des microfacettes ----
-        alpha = self.specular_roughness ** 2  # Le roughness au carré pour une réponse plus intuitive.
-        denom = (NdotH**2 * (alpha**2 - 1) + 1)
+        alpha = self.specular_roughness**2  # Le roughness au carré pour une réponse plus intuitive.
+        denom = NdotH**2 * (alpha**2 - 1) + 1
         D = (alpha**2) / (np.pi * (denom**2 + eps))
 
         # ---- Terme Géométrique G (Smith Schlick-GGX) ----
@@ -308,6 +321,4 @@ class NumpyShader(Shader):
         # Masquage de la contribution si la surface n'est pas orientée vers la caméra.
         spec_final = np.where(NdotV <= 0, 0, spec_final)
 
-        # Application de la couleur et du gain global.
         return NumpyRGBColor(1, 1, 1) * spec_final * self.specular_gain
-
