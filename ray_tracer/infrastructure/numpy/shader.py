@@ -103,7 +103,7 @@ class NumpyShader(Shader):
             direction_to_ray_origin,
         )
 
-        color += specular + reflection
+        color += (specular + reflection * 0.5) * is_in_light
 
         # color += reflection * self.reflection_gain
 
