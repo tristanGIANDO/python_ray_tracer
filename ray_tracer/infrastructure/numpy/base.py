@@ -41,6 +41,8 @@ class NumpyVector3D(Vector3D):
         return (self.x, self.y, self.z)
 
     def __mul__(self, other: int | float) -> Self:
+        if isinstance(other, NumpyRGBColor | NumpyVector3D):
+            return NumpyVector3D(self.x * other.x, self.y * other.y, self.z * other.z)
         return NumpyVector3D(self.x * other, self.y * other, self.z * other)
 
     def __add__(self, other: Self) -> Self:

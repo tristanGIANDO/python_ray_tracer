@@ -103,13 +103,9 @@ class NumpyShader(Shader):
             direction_to_ray_origin,
         )
 
-        # print(type(reflection.x), type(specular.x))
-        # print("color before", color.x)
-        # color += specular * reflection
-        color += specular * is_in_light
-        # print("color after", color.x)
+        color += specular + reflection
 
-        color += reflection * self.reflection_gain
+        # color += reflection * self.reflection_gain
 
         color += self._calculate_physical_iridescence(normal, direction_to_ray_origin)
 
@@ -321,4 +317,5 @@ class NumpyShader(Shader):
         # Masquage de la contribution si la surface n'est pas orientée vers la caméra.
         spec_final = np.where(NdotV <= 0, 0, spec_final)
 
-        return NumpyRGBColor(1, 1, 1) * spec_final * self.specular_gain
+        spec = NumpyRGBColor(1, 1, 1) * spec_final * self.specular_gain
+        return NumpyRGBColor(spec.x, spec.y, spec.z)
