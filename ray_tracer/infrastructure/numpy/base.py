@@ -51,6 +51,13 @@ class NumpyVector3D(Vector3D):
     def __sub__(self, other: Self) -> Self:
         return NumpyVector3D(self.x - other.x, self.y - other.y, self.z - other.z)
 
+    def __neg__(self):
+        """Defines the unary negation operator for NumpyVector3D."""
+        return NumpyVector3D(-self.x, -self.y, -self.z)
+
+    def __truediv__(self, other: int | float) -> Self:
+        return NumpyVector3D(self.x / other, self.y / other, self.z / other)
+
     def norm(self) -> Any:
         """Normalizes the vector to have a magnitude of 1."""
         mag = np.sqrt(self.dot(self))
