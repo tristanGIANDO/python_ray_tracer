@@ -309,13 +309,11 @@ class NumpyShader(Shader):
         glint = (1 - NdotV) ** glint_exponent
         # On ne voit le glint que si la lumière l'éclaire, on le module donc par NdotL.
         glint *= NdotL
-        glint_gain = getattr(self, "specular_glint_gain", 1.0)
 
         # ---- Combinaison finale ----
-        spec_final = spec_base + glint_gain * glint
+        spec_final = spec_base + self.specular_gain * glint
 
         # Masquage de la contribution si la surface n'est pas orientée vers la caméra.
-        spec_final = np.where(NdotV <= 0, 0, spec_final)
+        spec_final = NumpyRGBColor(1, 1, 1) * np.where(NdotV <= 0, 0, spec_final)
 
-        spec = NumpyRGBColor(1, 1, 1) * spec_final * self.specular_gain
-        return NumpyRGBColor(spec.x, spec.y, spec.z)
+        return NumpyRGBColor(spec_final.x, spec_final.y, spec_final.z)
