@@ -5,7 +5,8 @@ import numpy as np
 
 from ray_tracer.application import Renderer, Shader
 from ray_tracer.domain import DomeLight, Scene3D, Shape
-from ray_tracer.infrastructure.numpy.shape import NumpyRGBColor, NumpyVector3D, NumpyVectorArray3D
+from ray_tracer.infrastructure.numpy.base import NumpyRGBColor, NumpyVector3D, NumpyVectorArray3D
+from ray_tracer.infrastructure.numpy.shape import NumpyTexturedSphere
 
 FARAWAY = 1.0e39
 
@@ -17,6 +18,16 @@ class Texture:
     def get_color(self, intersection_point: NumpyVectorArray3D) -> NumpyRGBColor:
         """Returns the color of the texture at the intersection point."""
         return self.color
+
+
+# class UVTexture(Texture):
+#     def __init__(self, texture_path: str) -> None:
+#         image = Image.open(texture_path).convert("RGB")
+#         self.texture = np.asarray(image) / 255.0
+#         self.height, self.width, _ = self.texture.shape
+
+#     def get_color(self, intersection_point: NumpyVectorArray3D) -> NumpyRGBColor:
+#         return super().get_color(intersection_point)
 
 
 class TextureChecker(Texture):
@@ -85,7 +96,7 @@ class NumpyShader(Shader):
 
         color = self._calculate_ambient_color()
 
-        color += self._calculate_diffuse(intersection_point, normal, direction_to_light, is_in_light)
+        color += self._calculate_diffuse(intersection_point, normal, direction_to_light, is_in_light, shape)
 
         reflection = self._calculate_reflection(
             nudged_intersection_point,
@@ -95,7 +106,7 @@ class NumpyShader(Shader):
             ray_tracer,
         )
 
-        color += self._calculate_dome_light(normal, scene)
+        # color += self._calculate_dome_light(normal, scene)
 
         specular = self._calculate_physical_specular(
             normal,
@@ -103,11 +114,9 @@ class NumpyShader(Shader):
             direction_to_ray_origin,
         )
 
-        color += (specular + reflection * 0.5) * self.specular_gain * is_in_light
+        # color += (specular + reflection * 0.5) * self.specular_gain * is_in_light
 
-        # color += reflection * self.specular_gain
-
-        color += self._calculate_physical_iridescence(normal, direction_to_ray_origin)
+        # color += self._calculate_physical_iridescence(normal, direction_to_ray_origin)
 
         return color
 
@@ -133,12 +142,18 @@ class NumpyShader(Shader):
         normal: NumpyVector3D,
         direction_to_light: NumpyVector3D,
         is_in_light: bool,
+        shape: Shape,
     ) -> NumpyRGBColor:
         """Calculates the diffuse color of the shape at the intersection point."""
         diffuse_light_intensity = np.maximum(normal.dot(direction_to_light), 0)
-        return (
-            self.diffuse_color.get_color(intersection_point) * diffuse_light_intensity * is_in_light * self.diffuse_gain
-        )
+
+        # Check if the shape is a NumpyTexturedSphere and apply texture
+        if isinstance(shape, NumpyTexturedSphere):
+            texture_color = shape.diffusecolor(intersection_point)
+        else:
+            texture_color = self.diffuse_color.get_color(intersection_point)
+
+        return texture_color * diffuse_light_intensity * is_in_light * self.diffuse_gain
 
     def _calculate_reflection(  # TODO: VOIR TRANSMISSION
         self,

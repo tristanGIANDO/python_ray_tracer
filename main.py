@@ -5,7 +5,7 @@ from ray_tracer.application import render_image_pipeline
 from ray_tracer.domain import Camera, DomeLight, PointLight, Scene3D
 from ray_tracer.infrastructure.numpy.base import NumpyRenderer, NumpyVector3D
 from ray_tracer.infrastructure.numpy.shader import NumpyShader, Texture, TextureChecker
-from ray_tracer.infrastructure.numpy.shape import NumpyRGBColor, NumpySphere
+from ray_tracer.infrastructure.numpy.shape import NumpyRGBColor, NumpySphere, NumpyTexturedSphere
 
 if __name__ == "__main__":
     renderer = NumpyRenderer()
@@ -24,17 +24,18 @@ if __name__ == "__main__":
                     diffuse_color=Texture(NumpyRGBColor(1, 1, 1)),
                 ),
             ),
-            NumpySphere(
+            NumpyTexturedSphere(
                 NumpyVector3D(-0.45, 0.1, 1),
                 0.4,
                 NumpyShader(
                     reflection_gain=0,
-                    specular_gain=1,
+                    specular_gain=0.1,
                     specular_roughness=0.1,
                     iridescence_gain=0.0,
-                    diffuse_gain=0.0,
-                    diffuse_color=Texture(NumpyRGBColor(1, 0, 0)),
+                    diffuse_gain=1.0,
+                    diffuse_color=Texture(NumpyRGBColor(1, 1, 1)),
                 ),
+                Path("sourceimages/2k_earth_daymap.jpg"),
             ),
             NumpySphere(
                 NumpyVector3D(0, -99999.5, 0),
@@ -43,8 +44,8 @@ if __name__ == "__main__":
             ),
         ],
         [  # TODO: use multiple lights
-            # PointLight(NumpyVector3D(-5, 5, -10)),
-            PointLight(NumpyVector3D(-2, 1, 2)),
+            PointLight(NumpyVector3D(-5, 5, -10)),
+            # PointLight(NumpyVector3D(-2, 1, 2)),
             DomeLight(0.1, NumpyRGBColor(1, 1, 1)),
         ],
         Camera(NumpyVector3D(0, 0.2, -2), int(1920 / 2), int(1080 / 2)),
