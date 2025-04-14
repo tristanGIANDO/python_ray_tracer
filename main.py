@@ -14,7 +14,7 @@ if __name__ == "__main__":
         [
             NumpySphere(
                 NumpyVector3D(0.55, 0.5, 3),
-                1.0,
+                0.5,
                 NumpyShader(
                     reflection_gain=0.0,
                     specular_gain=0,
@@ -26,7 +26,7 @@ if __name__ == "__main__":
             ),
             NumpyTexturedSphere(
                 NumpyVector3D(-0.45, 0.1, 1),
-                0.4,
+                1,
                 NumpyShader(
                     reflection_gain=0,
                     specular_gain=0.1,
@@ -35,7 +35,7 @@ if __name__ == "__main__":
                     diffuse_gain=1.0,
                     diffuse_color=Texture(NumpyRGBColor(1, 1, 1)),
                 ),
-                Path("sourceimages/2k_earth_daymap.jpg"),
+                Path("sourceimages/2k_mars.jpg"),
             ),
             NumpySphere(
                 NumpyVector3D(0, -99999.5, 0),
