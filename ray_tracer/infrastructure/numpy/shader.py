@@ -224,7 +224,8 @@ class NumpyShader(Shader):
 
         film_color = NumpyRGBColor(r, g, b)
 
-        # The film weight allows blending between the film result (with iridescent effect) and the base BSDF (considered neutral here, e.g., white)
+        # The film weight allows blending between the film result (with iridescent effect)
+        # and the base BSDF (considered neutral here, e.g., white)
         blended_color = film_color * self.thin_film_weight
 
         # Return the final color weighted by a global iridescence gain
