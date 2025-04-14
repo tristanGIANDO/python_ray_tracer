@@ -103,9 +103,9 @@ class NumpyShader(Shader):
             direction_to_ray_origin,
         )
 
-        color += (specular + reflection * 0.5) * is_in_light
+        color += (specular + reflection * 0.5) * self.specular_gain * is_in_light
 
-        # color += reflection * self.reflection_gain
+        # color += reflection * self.specular_gain
 
         color += self._calculate_physical_iridescence(normal, direction_to_ray_origin)
 
