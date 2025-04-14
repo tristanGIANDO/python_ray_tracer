@@ -48,6 +48,10 @@ class NumpyShader(Shader):
         self.iridescence_gain = iridescence_gain
         self.diffuse_gain = diffuse_gain
         self.diffuse_color = diffuse_color
+        self.specular_ior = 1.5  # default value for glass
+        self.thin_film_weight = 0.1  # range [0, 1]
+        self.thin_film_thickness = 0.3  # range [0, 1]
+        self.thin_film_ior = 1.4  # range [1, 3]
 
     def to_rgb(self, shader: Self) -> NumpyRGBColor:
         return NumpyRGBColor(
@@ -83,7 +87,7 @@ class NumpyShader(Shader):
 
         color += self._calculate_diffuse(intersection_point, normal, direction_to_light, is_in_light)
 
-        color += self._calculate_reflection(
+        reflection = self._calculate_reflection(
             nudged_intersection_point,
             normal,
             normalized_ray_direction,
@@ -93,9 +97,17 @@ class NumpyShader(Shader):
 
         color += self._calculate_dome_light(normal, scene)
 
-        color += self._calculate_phong_specular(normal, direction_to_light, direction_to_ray_origin) * is_in_light
+        specular = self._calculate_physical_specular(
+            normal,
+            direction_to_light,
+            direction_to_ray_origin,
+        )
 
-        color += self._calculate_iridescence(normal, direction_to_ray_origin)
+        color += (specular + reflection * 0.5) * self.specular_gain * is_in_light
+
+        # color += reflection * self.specular_gain
+
+        color += self._calculate_physical_iridescence(normal, direction_to_ray_origin)
 
         return color
 
@@ -128,7 +140,7 @@ class NumpyShader(Shader):
             self.diffuse_color.get_color(intersection_point) * diffuse_light_intensity * is_in_light * self.diffuse_gain
         )
 
-    def _calculate_reflection(
+    def _calculate_reflection(  # TODO: VOIR TRANSMISSION
         self,
         nudged_intersection_point: NumpyVector3D,
         normal: NumpyVector3D,
@@ -137,13 +149,15 @@ class NumpyShader(Shader):
         ray_tracer: Renderer,
     ) -> NumpyRGBColor:
         ray_direction = (normalized_ray_direction - normal * 2 * normalized_ray_direction.dot(normal)).norm()
-        return (
-            ray_tracer.raytrace_scene(
-                nudged_intersection_point,
-                ray_direction,
-                scene,
-            )
-            * self.reflection_gain
+        color = ray_tracer.raytrace_scene(
+            nudged_intersection_point,
+            ray_direction,
+            scene,
+        )
+        return NumpyRGBColor(
+            np.array(color.x),
+            np.array(color.y),
+            np.array(color.z),
         )
 
     def _calculate_phong_specular(
@@ -169,25 +183,53 @@ class NumpyShader(Shader):
     def _calculate_ambient_color(self) -> NumpyRGBColor:
         return NumpyRGBColor(0.004, 0.004, 0.004)  # minimum black color
 
-    def _calculate_iridescence(
+    def _calculate_physical_iridescence(  # TODO: NE SE VOIT QUE DANS LE SPECULAIRE!
         self,
         normal: NumpyVector3D,
         direction_to_ray_origin: NumpyVector3D,
     ) -> NumpyRGBColor:
-        """Irisdescence effect based on the angle between the normal and the direction to the ray origin.
-        The more the angle is close to 90 degrees, the more the iridescence effect is visible.
-        The iridescence effect is more pronounced at the edges of the object.
+        """Calculates an iridescence color based on thin-film interference,
+        incorporating three parameters:
+            - thin_film_weight: the weight (coverage) that blends the film effect with the base,
+            - thin_film_thickness: the thickness of the film, affecting the spacing of the fringes,
+            - thin_film_ior: the refractive index of the film, influencing the hue of the fringes.
+
+        The effect is achieved by modulating a sinusoidal oscillation (simulating interference)
+        based on the angle between the normal and the direction to the ray origin.
         """
+        # Calculate the viewing angle, in [0,1]
         view_angle = np.clip(normal.dot(direction_to_ray_origin), 0.0, 1.0)
 
-        iridescence_factor = (
-            np.abs(view_angle - 0.5) * 2  # 0.5 is the middle of the angle, it amplifies the effect on the edges
-        )
+        # An angular factor centered around 0.5 to enhance the effect at the edges
+        angle_factor = np.abs(view_angle - 0.5) * 2.0
 
-        color_variation = np.sin(iridescence_factor * np.pi)
-        iridescence_color = NumpyRGBColor(color_variation, 1 - color_variation, 0.5)  # modify z to shift the color
+        # Use the thickness to adjust the frequency of the fringes:
+        # Multiply by π and an arbitrary factor (here 10) to highlight oscillations.
+        phase = angle_factor * np.pi * self.thin_film_thickness * 10.0
 
-        return iridescence_color * self.iridescence_gain
+        # The interference pattern oscillates between -1 and 1
+        interference_pattern = np.sin(phase)
+
+        # The refractive index influences the hue. Here, thin_film_ior is mapped from [1,3] to a factor [0,1]
+        # which will be used to vary the red and green components.
+        hue_shift = (self.thin_film_ior - 1.0) / 2.0
+
+        # Construct a fringe color whose intensity varies with the interference and the index:
+        # - The red component is boosted when hue_shift is high,
+        # - The green component is complemented inversely,
+        # - The blue component is positioned around 0.5 and modulated by the interference.
+        r = interference_pattern * hue_shift + (1.0 - hue_shift) * (1.0 - interference_pattern)
+        g = interference_pattern * (1.0 - hue_shift) + hue_shift * (1.0 - interference_pattern)
+        b = 0.5 + 0.5 * interference_pattern
+
+        film_color = NumpyRGBColor(r, g, b)
+
+        # The film weight allows blending between the film result (with iridescent effect)
+        # and the base BSDF (considered neutral here, e.g., white)
+        blended_color = film_color * self.thin_film_weight
+
+        # Return the final color weighted by a global iridescence gain
+        return blended_color * self.iridescence_gain
 
     def _calculate_dome_light(self, normal: NumpyVector3D, scene: Scene3D) -> NumpyRGBColor:
         light_direction = NumpyVector3D(0, 1, 0)  # from sky
@@ -203,72 +245,76 @@ class NumpyShader(Shader):
 
     def _calculate_physical_specular(
         self,
-        normal: np.ndarray,
-        direction_to_light: np.ndarray,
-        direction_to_ray_origin: np.ndarray,
-        base_weight: float = 1.0,
-        base_color: np.ndarray = np.array([1.0, 1.0, 1.0]),
-        specular_weight: float = 1.0,
-        specular_color: np.ndarray = np.array([1.0, 1.0, 1.0]),
-        specular_roughness: float = 0.01,
-        specular_roughness_anisotropy: float = 0.0,
-    ) -> np.ndarray:
-        """Calcule le BRDF spéculaire d’un métal avec Fresnel F82-tint et modèle GGX."""
+        normal: NumpyVector3D,
+        direction_to_light: NumpyVector3D,
+        direction_to_ray_origin: NumpyVector3D,
+    ) -> NumpyRGBColor:
+        """Calcule le terme spéculaire en combinant un modèle microfacettes GGX (avec Fresnel)
+        et un boost de glint aux bords, visible uniquement si la lumière (domeLight ou équivalent)
+        éclaire la surface.
 
-        def normalize(v):
-            return v / (np.linalg.norm(v) + 1e-8)
+        Le glint est modulé par l'intensité lumineuse incidente (via NdotL), de sorte que,
+        en l'absence de lumière, il ne s'ajoute pas même si l'angle de vue est glancing.
 
-        def dot(a, b):
-            return np.clip(np.dot(a.flatten(), b.flatten()), 0.0, 1.0)
+        Args:
+            normal (NumpyVector3D): la normale à la surface.
+            direction_to_light (NumpyVector3D): la direction (normalisée) vers la source de lumière.
+            direction_to_ray_origin (NumpyVector3D): la direction (normalisée) vers la caméra.
 
-        def F_schlick(mu, F0):
-            return F0 + (1 - F0) * (1 - mu) ** 5
+        Attributs attendus sur self:
+            - self.specular_roughness: valeur dans [0, 1] (0 = surface parfaitement lisse).
+            - self.specular_gain: gain appliqué au terme spéculaire.
+            - self.specular_ior: indice de réfraction du matériau (pour Fresnel si non métallique).
+            - self.is_metallic (optionnel): booléen indiquant si le matériau est métallique.
+            - self.specular_color (optionnel): couleur de base du spéculaire pour les matériaux métalliques.
+            - self.specular_glint_gain (optionnel): gain spécifique pour ajuster la contribution du glint.
 
-        def compute_fresnel_F82(mu, F0, F_schlick_bar, F_bar, specular_weight):
-            correction = mu * (1 - mu) ** 6 * mu_bar * (1 - mu_bar) ** 6 * (F_schlick_bar - F_bar)
-            return specular_weight * (F_schlick(mu, F0) - correction)
+        Returns:
+            NumpyRGBColor: la couleur spéculaire résultante.
+        """
+        eps = 1e-8  # Petite constante pour éviter la division par zéro.
 
-        def D_GGX(NdotH, alpha):
-            denom = NdotH**2 * (alpha**2 - 1) + 1
-            return (alpha**2) / (np.pi * denom**2 + 1e-8)
+        # Normalisation des vecteurs
+        L = direction_to_light.norm()  # Direction vers la lumière.
+        V = direction_to_ray_origin.norm()  # Direction vers la caméra.
+        H = (L + V).norm()  # Vecteur milieu.
 
-        def G_smith(NdotV, NdotL, alpha):
-            def G1(NdotX):
-                a = alpha
-                return 2 * NdotX / (NdotX + np.sqrt(a**2 + (1 - a**2) * NdotX**2 + 1e-8))
+        # Calcul des produits scalaires nécessaires
+        NdotV = np.clip(normal.dot(V), 0, 1)
+        NdotH = np.clip(normal.dot(H), 0, 1)
+        VdotH = np.clip(V.dot(H), 0, 1)
+        # Calcul de l'intensité lumineuse incidente (ici utilisée pour conditionner le glint)
+        NdotL = np.clip(normal.dot(L), 0, 1)
 
-            return G1(NdotV) * G1(NdotL)
+        # ---- Fresnel (Schlick) ----
+        F0 = ((self.specular_ior - 1) / (self.specular_ior + 1)) ** 2
+        F = F0 + (1 - F0) * (1 - VdotH) ** 5
 
-        normal = np.array(normal.components())
-        direction_to_light = np.array(direction_to_light.components())
-        direction_to_ray_origin = np.array(direction_to_ray_origin.components())
+        # ---- Distribution GGX des microfacettes ----
+        alpha = self.specular_roughness**2  # Le roughness au carré pour une réponse plus intuitive.
+        denom = NdotH**2 * (alpha**2 - 1) + 1
+        D = (alpha**2) / (np.pi * (denom**2 + eps))
 
-        # Vecteurs normalisés
-        n = normalize(normal)
-        l = normalize(direction_to_light)
-        v = normalize(direction_to_ray_origin)
+        # ---- Terme Géométrique G (Smith Schlick-GGX) ----
+        def G1(x: NumpyVector3D) -> float:
+            xdotN = np.clip(normal.dot(x), 0, 1)
+            return 2 * xdotN / (xdotN + np.sqrt(alpha**2 + (1 - alpha**2) * (xdotN**2)) + eps)
 
-        # μ = dot(normal, view direction)
-        mu = np.clip(dot(n, v), 0.0, 1.0)
+        G = G1(L) * G1(V)
 
-        # F0 = base_weight * base_color
-        F0 = base_weight * base_color
+        # ---- Composante spéculaire de base ----
+        spec_base = (F * D * G) / (4 * NdotV + eps)
 
-        # F_schlick(μ)
-        F_schlick_mu = F_schlick(mu, F0)
+        # ---- Calcul du glint (edge highlight conditionné par la lumière) ----
+        glint_exponent = 2.5  # Exposant ajustable pour moduler la décroissance du glint en fonction de l'angle.
+        glint = (1 - NdotV) ** glint_exponent
+        # On ne voit le glint que si la lumière l'éclaire, on le module donc par NdotL.
+        glint *= NdotL
 
-        # Calcul du terme correctif (F82)
-        mu_bar = 1 / 7
-        F_schlick_bar = F_schlick(mu_bar, F0)
-        F_bar = specular_color * F_schlick_bar
+        # ---- Combinaison finale ----
+        spec_final = spec_base + self.specular_gain * glint
 
-        correction_term = mu * (1 - mu) ** 6 * mu_bar * (1 - mu_bar) ** 6 * (F_schlick_bar - F_bar)
+        # Masquage de la contribution si la surface n'est pas orientée vers la caméra.
+        spec_final = NumpyRGBColor(1, 1, 1) * np.where(NdotV <= 0, 0, spec_final)
 
-        F82 = F_schlick_mu - correction_term
-
-        # Appliquer le poids global
-        F_metal = specular_weight * F82
-
-        x, y, z = np.clip(F_metal, 0.0, 1.0)
-
-        return NumpyRGBColor(x, y, z)
+        return NumpyRGBColor(spec_final.x, spec_final.y, spec_final.z)

@@ -41,6 +41,8 @@ class NumpyVector3D(Vector3D):
         return (self.x, self.y, self.z)
 
     def __mul__(self, other: int | float) -> Self:
+        if isinstance(other, NumpyRGBColor | NumpyVector3D):
+            return NumpyVector3D(self.x * other.x, self.y * other.y, self.z * other.z)
         return NumpyVector3D(self.x * other, self.y * other, self.z * other)
 
     def __add__(self, other: Self) -> Self:
@@ -48,6 +50,13 @@ class NumpyVector3D(Vector3D):
 
     def __sub__(self, other: Self) -> Self:
         return NumpyVector3D(self.x - other.x, self.y - other.y, self.z - other.z)
+
+    def __neg__(self):
+        """Defines the unary negation operator for NumpyVector3D."""
+        return NumpyVector3D(-self.x, -self.y, -self.z)
+
+    def __truediv__(self, other: int | float) -> Self:
+        return NumpyVector3D(self.x / other, self.y / other, self.z / other)
 
     def norm(self) -> Any:
         """Normalizes the vector to have a magnitude of 1."""
