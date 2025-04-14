@@ -42,7 +42,7 @@ if __name__ == "__main__":
                 NumpyShader(0.0, 0.1, 0.5, 0.0, 1.0, TextureChecker()),
             ),
         ],
-        [
+        [  # TODO: use multiple lights
             # PointLight(NumpyVector3D(-5, 5, -10)),
             PointLight(NumpyVector3D(-2, 1, 2)),
             DomeLight(0.1, NumpyRGBColor(1, 1, 1)),
