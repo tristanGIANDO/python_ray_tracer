@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from pathlib import Path
 
-from ray_tracer.domain import Camera, RGBColor, Scene3D, Vector3D
+from ray_tracer.domain import Camera, Scene3D, Vector3D
 
 
 class Renderer(ABC):
@@ -13,9 +13,9 @@ class Renderer(ABC):
     def raytrace_scene(
         self,
         ray_origin: Vector3D,
-        normalized_ray_direction: Vector3D,
+        normalized_ray_direction: list[Vector3D],
         scene: Scene3D,
-    ) -> RGBColor:
+    ) -> Vector3D:
         pass
 
     @abstractmethod
@@ -25,7 +25,7 @@ class Renderer(ABC):
     @abstractmethod
     def save_image(
         self,
-        color: RGBColor,
+        color: Vector3D,
         camera: Camera,
         output_path: Path,
     ) -> None:

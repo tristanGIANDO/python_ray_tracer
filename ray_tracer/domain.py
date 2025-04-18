@@ -7,10 +7,6 @@ class Vector3D:
         (self.x, self.y, self.z) = (x, y, z)
 
 
-class RGBColor(Vector3D):
-    pass
-
-
 @dataclass
 class Camera:
     """This object represents the observation point.
@@ -41,7 +37,7 @@ class DomeLight(Light):
     of an environment.
     """
 
-    color: RGBColor
+    color: Vector3D
 
 
 class Shape(ABC):

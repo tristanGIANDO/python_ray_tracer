@@ -7,7 +7,7 @@ from numpy.typing import ArrayLike
 from PIL import Image
 
 from ray_tracer.application import Renderer
-from ray_tracer.domain import Camera, RGBColor, Scene3D, Vector3D
+from ray_tracer.domain import Camera, Scene3D, Vector3D
 
 FARAWAY = 1.0e39
 
@@ -28,16 +28,16 @@ def extract(cond: ArrayLike, x: numbers.Number | int | float) -> numbers.Number 
 class NumpyVector3D(Vector3D):
     """Represents a 3D vector with numpy-based operations."""
 
-    def __init__(self, x: int | float, y: int | float, z: int | float) -> None:
+    def __init__(self, x: int | float | np.ndarray, y: int | float | np.ndarray, z: int | float | np.ndarray) -> None:
         (self.x, self.y, self.z) = (x, y, z)
 
-    def dot(self, other: "NumpyVector3D") -> float:
+    def dot(self, other: "NumpyVector3D") -> float | np.ndarray:
         return (self.x * other.x) + (self.y * other.y) + (self.z * other.z)
 
-    def __abs__(self) -> float:
+    def __abs__(self) -> float | np.ndarray:
         return self.dot(self)
 
-    def components(self) -> tuple[float, float, float]:
+    def components(self) -> tuple[float | np.ndarray, float | np.ndarray, float | np.ndarray]:
         return (self.x, self.y, self.z)
 
     def __mul__(self, other: int | float) -> "NumpyVector3D":
@@ -65,16 +65,23 @@ class NumpyVector3D(Vector3D):
         mag = np.sqrt(self.dot(self))
         return self * (1.0 / np.where(mag == 0, 1, mag))
 
-    def extract(self, cond: ArrayLike) -> "NumpyVector3D | NumpyVectorArray3D":
+    def extract(self, cond: np.ndarray) -> "NumpyVector3D | NumpyVectorArray3D":
         """Extracts components of the vector based on a condition."""
         if isinstance(cond, numbers.Number):
             return self
 
         return NumpyVectorArray3D(extract(cond, self.x), extract(cond, self.y), extract(cond, self.z))
 
-    def place(self, cond: ArrayLike) -> "NumpyVector3D":
+    def place(self, cond: np.ndarray) -> "NumpyVector3D":
         """Places the vector's components into a new vector."""
         r = NumpyVector3D(np.zeros(cond.shape), np.zeros(cond.shape), np.zeros(cond.shape))
+        if not isinstance(r.x, np.ndarray):
+            raise TypeError("r.x is not a numpy array")
+        if not isinstance(r.y, np.ndarray):
+            raise TypeError("r.y is not a numpy array")
+        if not isinstance(r.z, np.ndarray):
+            raise TypeError("r.z is not a numpy array")
+
         np.place(r.x, cond, self.x)
         np.place(r.y, cond, self.y)
         np.place(r.z, cond, self.z)
@@ -142,7 +149,7 @@ class NumpyRenderer(Renderer):
 
         return (NumpyVector3D(x, y, 0) - camera.position).norm()
 
-    def save_image(self, color: RGBColor, camera: Camera, output_path: str) -> None:
+    def save_image(self, color: NumpyVector3D, camera: Camera, output_path: str) -> None:
         rgb_colors = [
             Image.fromarray(
                 (255 * np.clip(layer, 0, 1).reshape((camera.height, camera.width))).astype(np.uint8),
