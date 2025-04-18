@@ -2,56 +2,43 @@ import time
 from pathlib import Path
 
 from ray_tracer.application import render_image_pipeline
-from ray_tracer.domain import Camera, DomeLight, PointLight, Scene3D
-from ray_tracer.infrastructure.numpy.base import NumpyRenderer, NumpyVector3D
-from ray_tracer.infrastructure.numpy.shader import NumpyShader, Texture, TextureChecker
-from ray_tracer.infrastructure.numpy.shape import NumpyRGBColor, NumpySphere
+from ray_tracer.domain.models import Camera, Diffuse, DomeLight, Iridescence, PointLight, Scene3D, Shader, Specular
+from ray_tracer.domain.vector import Vector3D
+from ray_tracer.infrastructure import NumpyRenderer, Sphere3D
 
 if __name__ == "__main__":
-    renderer = NumpyRenderer()
-
     scene = Scene3D(
         [
-            NumpySphere(
-                NumpyVector3D(0.55, 0.5, 3),
-                1.0,
-                NumpyShader(
-                    reflection_gain=0.0,
-                    specular_gain=0,
-                    specular_roughness=0.01,
-                    iridescence_gain=0,
-                    diffuse_gain=0.0,
-                    diffuse_color=Texture(NumpyRGBColor(1, 1, 1)),
+            (
+                Sphere3D(Vector3D(0.55, 0.5, 3.0), 0.5),
+                Shader(
+                    Diffuse(Path("sourceimages/hdri_2.jpg"), 0.5),
+                    Specular(Vector3D(0.0, 1.0, 1.0), 0.5, 0.5, 1.5),
                 ),
             ),
-            NumpySphere(
-                NumpyVector3D(-0.45, 0.1, 1),
-                0.4,
-                NumpyShader(
-                    reflection_gain=0,
-                    specular_gain=1,
-                    specular_roughness=0.1,
-                    iridescence_gain=0.0,
-                    diffuse_gain=0.0,
-                    diffuse_color=Texture(NumpyRGBColor(1, 0, 0)),
+            (
+                Sphere3D(Vector3D(-0.55, 0.1, 1.0), 0.5),
+                Shader(
+                    Diffuse(Path("sourceimages/2k_mars.jpg"), 1.0),
+                    Specular(Vector3D(1.0, 1.0, 1.0), 1.0, 0.9, 1.5),
+                    Iridescence(Vector3D(0.0, 1.0, 0.0), 0.05, 0.1, 1.0),
                 ),
             ),
-            NumpySphere(
-                NumpyVector3D(0, -99999.5, 0),
-                99999,
-                NumpyShader(0.0, 0.1, 0.5, 0.0, 1.0, TextureChecker()),
+            (
+                Sphere3D(Vector3D(0.0, -99999.5, 0.0), 99999),
+                Shader(
+                    Diffuse(Vector3D(1.0, 0.0, 1.0), 0.1),
+                    Specular(Vector3D(0.0, 1.0, 1.0), 0.5, 0.5, 1.5),
+                ),
             ),
         ],
         [  # TODO: use multiple lights
-            # PointLight(NumpyVector3D(-5, 5, -10)),
-            PointLight(NumpyVector3D(-2, 1, 2)),
-            DomeLight(0.1, NumpyRGBColor(1, 1, 1)),
+            PointLight(1.0, Vector3D(-5.0, 5.0, -10.0)),
+            DomeLight(0.1, Vector3D(0.0, 0.0, 0.0), Vector3D(1.0, 1.0, 1.0)),
         ],
-        Camera(NumpyVector3D(0, 0.2, -2), int(1920 / 2), int(1080 / 2)),
+        Camera(Vector3D(0.0, 0.2, -2.0), int(1920 / 2), int(1080 / 2)),
     )
 
-    output_path = Path("render.png")
-
     start_time = time.time()
-    render_image_pipeline(scene, output_path, renderer)
+    render_image_pipeline(scene, Path("render.png"), NumpyRenderer())
     print("Took", time.time() - start_time)  # noqa: T201
