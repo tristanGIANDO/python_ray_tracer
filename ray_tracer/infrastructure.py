@@ -10,15 +10,15 @@ from ray_tracer.domain.models import (
     Camera,
     Diffuse,
     DomeLight,
+    Object3D,
     Scene3D,
     Shader,
-    Shape,
     Specular,
 )
 from ray_tracer.domain.vector import Vector3D, extract
 
 
-class NumpySphere(Shape):
+class Sphere3D(Object3D):
     def __init__(
         self,
         center: Vector3D,
@@ -130,20 +130,12 @@ class NumpyRenderer(Renderer):
         Image.merge("RGB", rgb_colors).save(output_path)
 
 
-def to_rgb(shader: Shader) -> Vector3D:
-    return Vector3D(
-        np.clip(shader.x, 0, 1),
-        np.clip(shader.y, 0, 1),
-        np.clip(shader.z, 0, 1),
-    )
-
-
 def shade(
-    shape_data: tuple[Shape, Shader],
+    shape_data: tuple[Object3D, Shader],
     scene: Scene3D,
     ray_origin: Vector3D,
     normalized_ray_direction: Vector3D,
-    distance_origin_to_intersection: float,
+    distance_origin_to_intersection: np.ndarray,
     ray_tracer: Renderer,
     physical: bool,
 ) -> Vector3D:
@@ -155,7 +147,7 @@ def shade(
     direction_to_ray_origin = (scene.camera.position - hit_point).norm()
     nudged_intersection_point = hit_point + normals * 0.0001  # to avoid itself
 
-    is_in_light = calculate_shadow(
+    is_in_light = is_lightened(
         nudged_intersection_point,
         direction_to_light,
         scene,
@@ -172,7 +164,7 @@ def shade(
         ray_tracer,
     )
 
-    # color += self._calculate_dome_light(normals, scene)
+    color += calculate_dome_light(normals, scene)
 
     if physical:
         specular = calculate_physical_specular(
@@ -189,18 +181,18 @@ def shade(
             direction_to_ray_origin,
         )
 
-    # color += (specular + reflection * 0.5) * self.specular_gain * is_in_light
+    color += (specular + reflection * 0.5) * shader.specular.intensity * is_in_light
 
-    # color += self._calculate_iridescence(normals, direction_to_ray_origin)
+    # color += calculate_iridescence(normals, direction_to_ray_origin)
 
     return color
 
 
-def calculate_shadow(
+def is_lightened(
     nudged_intersection_point: Vector3D,
     direction_to_light: Vector3D,
     scene: Scene3D,
-    shape_data: tuple[Shape, Shader],
+    shape_data: tuple[Object3D, Shader],
 ) -> bool:
     """Calculates whether the intersection point is in light or in shadow.
     It does this by checking if the intersection point is closer to the light source.
@@ -218,7 +210,7 @@ def calculate_diffuse(
     normals: Vector3D,
     direction_to_light: Vector3D,
     is_in_light: bool,
-    shape: Shape,
+    shape: Object3D,
 ) -> Vector3D:
     """Calculates the diffuse color of the shape at the intersection point."""
     diffuse_light_intensity = np.maximum(normals.dot(direction_to_light), 0)
@@ -364,6 +356,7 @@ def calculate_physical_specular(
     en l'absence de lumière, il ne s'ajoute pas même si l'angle de vue est glancing.
 
     Args:
+        specular (Specular): le matériau spéculaire.
         normals (Vector3D): la normale à la surface.
         direction_to_light (Vector3D): la direction (normalisée) vers la source de lumière.
         direction_to_ray_origin (Vector3D): la direction (normalisée) vers la caméra.
@@ -403,7 +396,7 @@ def calculate_physical_specular(
     D = (alpha**2) / (np.pi * (denom**2 + eps))
 
     # ---- Terme Géométrique G (Smith Schlick-GGX) ----
-    def G1(x: Vector3D) -> float:
+    def G1(x: Vector3D) -> np.ndarray:
         xdotN = np.clip(normals.dot(x), 0, 1)
         return 2 * xdotN / (xdotN + np.sqrt(alpha**2 + (1 - alpha**2) * (xdotN**2)) + eps)
 

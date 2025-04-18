@@ -43,7 +43,7 @@ from ray_tracer.infrastructure import (
     CheckeredSphere,
     NumpyRenderer,
     NumpyRGBColor,
-    NumpySphere,
+    Sphere3D,
     Vector3D,
 )
 
@@ -51,7 +51,7 @@ renderer = NumpyRenderer()
 
 scene = Scene3D(
     [
-        NumpySphere(
+        Sphere3D(
             Vector3D(0.55, 0.5, 3),
             0.5,
             NumpyPhysicalShader(
@@ -63,7 +63,7 @@ scene = Scene3D(
                 0,
             ),
         ),
-        NumpySphere(
+        Sphere3D(
             Vector3D(-0.55, 0.1, 1),
             1,
             NumpyPhysicalShader(
@@ -75,7 +75,7 @@ scene = Scene3D(
                 0.0,
             ),
         ),
-        NumpySphere(
+        Sphere3D(
             Vector3D(0, -99999.5, 0),
             99999,
             NumpyPhysicalShader(

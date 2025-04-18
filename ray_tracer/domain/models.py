@@ -7,7 +7,7 @@ FARAWAY = 1.0e39
 
 
 @dataclass
-class Shape:
+class Object3D:
     def intersect(self, ray_origin: Vector3D, normalized_ray_direction: Vector3D) -> None:
         raise NotImplementedError
 
@@ -80,6 +80,6 @@ class Shader:
 class Scene3D:
     """The 3D scene groups together all the 3D elements that will interact with each other."""
 
-    shapes: list[tuple[Shape, Shader]]
+    shapes: list[tuple[Object3D, Shader]]
     lights: list[PointLight | DomeLight]
     camera: Camera

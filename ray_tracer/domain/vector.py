@@ -4,17 +4,17 @@ from typing import Any
 import numpy as np
 
 
-def extract(cond: np.ndarray, x: numbers.Number | int | float | np.ndarray) -> numbers.Number | np.ndarray:
+def extract(condition: bool, x: numbers.Number | int | float | np.ndarray) -> numbers.Number | np.ndarray:
     """Extracts elements from an array or returns the number itself if it is a scalar.
 
     Args:
-        cond (array-like): Condition array to extract elements.
+        condition (array-like): Condition array to extract elements.
         x: Input number or array.
     """
     if isinstance(x, numbers.Number):
         return x
     else:
-        return np.extract(cond, x)
+        return np.extract(condition, x)
 
 
 class Vector3D:
@@ -58,16 +58,17 @@ class Vector3D:
         mag = np.sqrt(self.dot(self))
         return self * (1.0 / np.where(mag == 0, 1, mag))
 
-    def extract(self, cond: np.ndarray) -> "Vector3D | Vector3D":
+    def extract(self, condition: bool) -> "Vector3D | Vector3D":
         """Extracts components of the vector based on a condition."""
-        if isinstance(cond, numbers.Number):
+        if isinstance(condition, numbers.Number):
             return self
 
-        return Vector3D(extract(cond, self.x), extract(cond, self.y), extract(cond, self.z))
+        return Vector3D(extract(condition, self.x), extract(condition, self.y), extract(condition, self.z))  # noqa
 
-    def place(self, cond: np.ndarray) -> "Vector3D":
+    def place(self, condition: np.ndarray) -> "Vector3D":
         """Places the vector's components into a new vector."""
-        r = Vector3D(np.zeros(cond.shape), np.zeros(cond.shape), np.zeros(cond.shape))
+        r = Vector3D(np.zeros(condition.shape), np.zeros(condition.shape), np.zeros(condition.shape))
+
         if not isinstance(r.x, np.ndarray):
             raise TypeError("r.x is not a numpy array")
         if not isinstance(r.y, np.ndarray):
@@ -75,7 +76,7 @@ class Vector3D:
         if not isinstance(r.z, np.ndarray):
             raise TypeError("r.z is not a numpy array")
 
-        np.place(r.x, cond, self.x)
-        np.place(r.y, cond, self.y)
-        np.place(r.z, cond, self.z)
+        np.place(r.x, condition, self.x)
+        np.place(r.y, condition, self.y)
+        np.place(r.z, condition, self.z)
         return r
