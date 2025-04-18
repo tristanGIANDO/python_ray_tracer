@@ -66,14 +66,21 @@ class Specular(Slot):
     ior: float
 
 
+@dataclass
+class Iridescence(Slot):
+    thickness: float
+    ior: float
+
+
 class Diffuse(Slot):
     pass
 
 
 @dataclass
 class Shader:
-    diffuse: Diffuse
-    specular: Specular
+    diffuse: Diffuse | None
+    specular: Specular | None
+    iridescence: Iridescence | None = None
 
 
 @dataclass

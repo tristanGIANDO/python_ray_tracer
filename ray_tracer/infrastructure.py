@@ -10,6 +10,7 @@ from ray_tracer.domain.models import (
     Camera,
     Diffuse,
     DomeLight,
+    Iridescence,
     Object3D,
     Scene3D,
     Shader,
@@ -154,7 +155,10 @@ def shade(
         shape_data,
     )
 
-    color = calculate_diffuse(shader.diffuse, hit_point, normals, direction_to_light, is_in_light, shape)
+    color = Vector3D(0.04, 0.04, 0.04)  # darkest ambient light
+
+    if shader.diffuse is not None:
+        color = calculate_diffuse(shader.diffuse, hit_point, normals, direction_to_light, is_in_light, shape)
 
     reflection = calculate_reflection(
         nudged_intersection_point,
@@ -166,14 +170,17 @@ def shade(
 
     color += calculate_dome_light(normals, scene)
 
-    if physical:
+    if shader.specular is not None and physical:
         specular = calculate_physical_specular(
             shader.specular,
             normals,
             direction_to_light,
             direction_to_ray_origin,
         )
-    else:
+
+        color += (specular + reflection * 0.5) * shader.specular.intensity * is_in_light
+
+    elif shader.specular is not None:
         specular = calculate_phong_specular(
             shader.specular,
             normals,
@@ -181,9 +188,10 @@ def shade(
             direction_to_ray_origin,
         )
 
-    color += (specular + reflection * 0.5) * shader.specular.intensity * is_in_light
+        color += (specular + reflection * 0.5) * shader.specular.intensity * is_in_light
 
-    # color += calculate_iridescence(normals, direction_to_ray_origin)
+    if shader.iridescence is not None:
+        color += calculate_iridescence(shader.iridescence, normals, direction_to_ray_origin)
 
     return color
 
@@ -267,6 +275,7 @@ def calculate_phong_specular(
 
 
 def calculate_iridescence(  # TODO: NE SE VOIT QUE DANS LE SPECULAIRE!
+    iridescence: Iridescence,
     normals: Vector3D,
     direction_to_ray_origin: Vector3D,
 ) -> Vector3D:
@@ -287,14 +296,14 @@ def calculate_iridescence(  # TODO: NE SE VOIT QUE DANS LE SPECULAIRE!
 
     # Use the thickness to adjust the frequency of the fringes:
     # Multiply by π and an arbitrary factor (here 10) to highlight oscillations.
-    phase = angle_factor * np.pi * self.thin_film_thickness * 10.0
+    phase = angle_factor * np.pi * iridescence.thickness * 10.0
 
     # The interference pattern oscillates between -1 and 1
     interference_pattern = np.sin(phase)
 
     # The refractive index influences the hue. Here, thin_film_ior is mapped from [1,3] to a factor [0,1]
     # which will be used to vary the red and green components.
-    hue_shift = (self.thin_film_ior - 1.0) / 2.0
+    hue_shift = (iridescence.ior - 1.0) / 2.0
 
     # Construct a fringe color whose intensity varies with the interference and the index:
     # - The red component is boosted when hue_shift is high,
@@ -306,12 +315,7 @@ def calculate_iridescence(  # TODO: NE SE VOIT QUE DANS LE SPECULAIRE!
 
     film_color = Vector3D(r, g, b)
 
-    # The film weight allows blending between the film result (with iridescent effect)
-    # and the base BSDF (considered neutral here, e.g., white)
-    blended_color = film_color * self.thin_film_weight
-
-    # Return the final color weighted by a global iridescence gain
-    return blended_color * self.iridescence_gain
+    return film_color * iridescence.intensity
 
 
 def calculate_dome_light(normals: Vector3D, scene: Scene3D) -> Vector3D:
