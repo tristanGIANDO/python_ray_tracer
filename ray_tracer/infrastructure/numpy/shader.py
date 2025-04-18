@@ -9,7 +9,6 @@ from PIL import Image
 from ray_tracer.application import Renderer, Shader
 from ray_tracer.domain import DomeLight, Scene3D, Shape
 from ray_tracer.infrastructure.numpy.base import NumpyRGBColor, NumpyVector3D, NumpyVectorArray3D
-from ray_tracer.infrastructure.numpy.shape import NumpyTexturedSphere
 
 FARAWAY = 1.0e39
 
@@ -27,28 +26,6 @@ class Specular(Slot):
 
 class Diffuse(Slot):
     pass
-
-
-class Texture:
-    def __init__(self, color: NumpyRGBColor | None = None) -> None:
-        self.color = color if color is not None else NumpyRGBColor(1, 1, 1)
-
-    def get_color(self, intersection_point: NumpyVectorArray3D) -> NumpyRGBColor:
-        """Returns the color of the texture at the intersection point."""
-        return self.color
-
-
-class TextureChecker(Texture):
-    def __init__(
-        self,
-        color: NumpyRGBColor | None = None,
-    ) -> None:
-        self.color = color if color is not None else NumpyRGBColor(1, 1, 1)
-
-    def get_color(self, intersection_point: NumpyVectorArray3D) -> NumpyRGBColor:
-        checker = ((intersection_point.x * 2).astype(int) % 2) == ((intersection_point.z * 2).astype(int) % 2)
-
-        return NumpyRGBColor(1, 1, 1) * checker
 
 
 class NumpyShader(Shader):

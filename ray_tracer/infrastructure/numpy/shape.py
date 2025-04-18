@@ -1,15 +1,10 @@
-from pathlib import Path
-
 import numpy as np
-from PIL import Image
 
 from ray_tracer.application import Shader
 from ray_tracer.domain import Shape
 from ray_tracer.infrastructure.numpy.base import (
     FARAWAY,
-    NumpyRGBColor,
     NumpyVector3D,
-    NumpyVectorArray3D,
 )
 
 
@@ -50,10 +45,7 @@ class NumpySphere(Shape):
         condition_to_have_intersection = (discriminator > 0) & (solution > 0)
         return np.where(condition_to_have_intersection, solution, FARAWAY)
 
-    def diffusecolor(self, intersection_point: NumpyVectorArray3D) -> NumpyRGBColor:
-        return NumpyRGBColor(1, 1, 1)
-
-    def get_uvs(self, hit_point: NumpyVector3D) -> NumpyRGBColor:
+    def get_uvs(self, hit_point: NumpyVector3D) -> tuple[np.ndarray, np.ndarray]:
         normals = hit_point - self.center
 
         u = 0.5 + np.arctan2(normals.z, normals.x) / (2 * np.pi)
@@ -68,27 +60,8 @@ class NumpyTexturedSphere(NumpySphere):
         center: NumpyVector3D,
         radius: float,
         shader: Shader,
-        texture_path: Path,  # TODO: move in shader
     ) -> None:
         self.center = center
         self.position = center
         self.radius = radius
         self.shader = shader
-
-        self.texture = Image.open(texture_path).convert("RGB")
-        # self.texture = np.asarray(image) / 255.0
-
-    def diffusecolor(self, hit_point: NumpyVector3D) -> NumpyRGBColor:
-        """Calcule la couleur diffusée à partir d'un point d'impact, en tenant compte de la texture.
-        On considère que les composantes de hit_point et self.center sont des tableaux NumPy.
-        """
-        if self.texture:
-            normals = hit_point - self.center
-
-            # Calculer les coordonnées de texture (u, v) pour tous les points
-            u = 0.5 + np.arctan2(normals.z, normals.x) / (2 * np.pi)
-            v = 0.5 - np.arcsin(normals.y) / np.pi
-
-            return get_texture_color(self.texture, u, v)
-        else:
-            return NumpyRGBColor(0.5, 0.5, 0.5)

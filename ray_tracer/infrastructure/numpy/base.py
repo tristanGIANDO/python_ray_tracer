@@ -1,6 +1,6 @@
 import numbers
 from functools import reduce
-from typing import Any, Self
+from typing import Any
 
 import numpy as np
 from numpy.typing import ArrayLike
@@ -12,7 +12,7 @@ from ray_tracer.domain import Camera, RGBColor, Scene3D, Vector3D
 FARAWAY = 1.0e39
 
 
-def extract(cond: ArrayLike, x: numbers.Number | np.ndarray) -> numbers.Number | np.ndarray:
+def extract(cond: ArrayLike, x: numbers.Number | int | float) -> numbers.Number | np.ndarray:
     """Extracts elements from an array or returns the number itself if it is a scalar.
 
     Args:
@@ -31,7 +31,7 @@ class NumpyVector3D(Vector3D):
     def __init__(self, x: int | float, y: int | float, z: int | float) -> None:
         (self.x, self.y, self.z) = (x, y, z)
 
-    def dot(self, other: Self) -> float:
+    def dot(self, other: "NumpyVector3D") -> float:
         return (self.x * other.x) + (self.y * other.y) + (self.z * other.z)
 
     def __abs__(self) -> float:
@@ -40,22 +40,22 @@ class NumpyVector3D(Vector3D):
     def components(self) -> tuple[float, float, float]:
         return (self.x, self.y, self.z)
 
-    def __mul__(self, other: int | float) -> Self:
+    def __mul__(self, other: int | float) -> "NumpyVector3D":
         if isinstance(other, NumpyRGBColor | NumpyVector3D):
             return NumpyVector3D(self.x * other.x, self.y * other.y, self.z * other.z)
         return NumpyVector3D(self.x * other, self.y * other, self.z * other)
 
-    def __add__(self, other: Self) -> Self:
+    def __add__(self, other: "NumpyVector3D") -> "NumpyVector3D":
         return NumpyVector3D(self.x + other.x, self.y + other.y, self.z + other.z)
 
-    def __sub__(self, other: Self) -> Self:
+    def __sub__(self, other: "NumpyVector3D") -> "NumpyVector3D":
         return NumpyVector3D(self.x - other.x, self.y - other.y, self.z - other.z)
 
     def __neg__(self):
         """Defines the unary negation operator for NumpyVector3D."""
         return NumpyVector3D(-self.x, -self.y, -self.z)
 
-    def __truediv__(self, other: int | float) -> Self:
+    def __truediv__(self, other: int | float) -> "NumpyVector3D":
         if isinstance(other, NumpyRGBColor | NumpyVector3D):
             return NumpyVector3D(self.x / other.x, self.y / other.y, self.z / other.z)
         return NumpyVector3D(self.x / other, self.y / other, self.z / other)
@@ -65,14 +65,14 @@ class NumpyVector3D(Vector3D):
         mag = np.sqrt(self.dot(self))
         return self * (1.0 / np.where(mag == 0, 1, mag))
 
-    def extract(self, cond: ArrayLike) -> Self | "NumpyVectorArray3D":
+    def extract(self, cond: ArrayLike) -> "NumpyVector3D | NumpyVectorArray3D":
         """Extracts components of the vector based on a condition."""
         if isinstance(cond, numbers.Number):
             return self
 
         return NumpyVectorArray3D(extract(cond, self.x), extract(cond, self.y), extract(cond, self.z))
 
-    def place(self, cond: ArrayLike) -> Self:
+    def place(self, cond: ArrayLike) -> "NumpyVector3D":
         """Places the vector's components into a new vector."""
         r = NumpyVector3D(np.zeros(cond.shape), np.zeros(cond.shape), np.zeros(cond.shape))
         np.place(r.x, cond, self.x)

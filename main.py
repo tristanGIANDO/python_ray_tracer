@@ -3,9 +3,9 @@ from pathlib import Path
 
 from ray_tracer.application import render_image_pipeline
 from ray_tracer.domain import Camera, DomeLight, PointLight, Scene3D
-from ray_tracer.infrastructure.numpy.base import NumpyRenderer, NumpyVector3D
-from ray_tracer.infrastructure.numpy.shader import Diffuse, NumpyShader, Specular, Texture, TextureChecker
-from ray_tracer.infrastructure.numpy.shape import NumpyRGBColor, NumpySphere, NumpyTexturedSphere
+from ray_tracer.infrastructure.numpy.base import NumpyRenderer, NumpyRGBColor, NumpyVector3D
+from ray_tracer.infrastructure.numpy.shader import Diffuse, NumpyShader, Specular
+from ray_tracer.infrastructure.numpy.shape import NumpySphere
 
 if __name__ == "__main__":
     renderer = NumpyRenderer()
@@ -18,10 +18,10 @@ if __name__ == "__main__":
                 NumpyShader(
                     Diffuse(NumpyRGBColor(1, 1, 1), 1.0),
                     Specular(NumpyRGBColor(0, 1, 1), 0.5, 0.5),
-                    reflection_gain=0.0,
-                    specular_gain=0,
-                    specular_roughness=0.01,
-                    iridescence_gain=0,
+                    0.0,
+                    0,
+                    0.01,
+                    0,
                 ),
             ),
             NumpySphere(
@@ -30,10 +30,10 @@ if __name__ == "__main__":
                 NumpyShader(
                     Diffuse(Path("sourceimages/2k_mars.jpg"), 1.0),
                     Specular(NumpyRGBColor(1, 1, 1), 1.0, 0.5),
-                    reflection_gain=0,
-                    specular_gain=0.1,
-                    specular_roughness=0.1,
-                    iridescence_gain=0.0,
+                    0,
+                    0.1,
+                    0.1,
+                    0.0,
                 ),
             ),
             NumpySphere(
@@ -50,7 +50,7 @@ if __name__ == "__main__":
             ),
         ],
         [  # TODO: use multiple lights
-            PointLight(NumpyVector3D(-5, 5, -10)),
+            PointLight(1.0, NumpyVector3D(-5, 5, -10)),
             # PointLight(NumpyVector3D(-2, 1, 2)),
             DomeLight(0.1, NumpyRGBColor(1, 1, 1)),
         ],
