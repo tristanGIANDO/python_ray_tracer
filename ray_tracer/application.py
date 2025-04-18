@@ -33,7 +33,7 @@ class Renderer(ABC):
         pass
 
 
-class Shader(ABC):
+class ShaderCalculator(ABC):
     @abstractmethod
     def to_rgb(self, shader: Self) -> Vector3D:
         pass

@@ -1,10 +1,23 @@
-from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from pathlib import Path
 
 from ray_tracer.domain.vector import Vector3D
 
 FARAWAY = 1.0e39
+
+
+@dataclass
+class Shape:
+    def intersect(self, ray_origin: Vector3D, normalized_ray_direction: Vector3D) -> None:
+        raise NotImplementedError
+
+    def get_normals(self, hit_point: Vector3D) -> Vector3D:
+        """Returns the normal vector of the shape at the intersection point."""
+        raise NotImplementedError
+
+    def get_uvs(self, hit_point: Vector3D) -> tuple[float, float]:
+        """Returns the UV coordinates of the shape at the intersection point."""
+        raise NotImplementedError
 
 
 @dataclass
@@ -22,13 +35,14 @@ class Camera:
 @dataclass
 class Light:
     intensity: float
+    position: Vector3D
 
 
 @dataclass
 class PointLight(Light):  # TODO: add intensity
     """A pointLight is a point that emits rays in all directions and is used as a light source."""
 
-    position: Vector3D
+    pass
 
 
 @dataclass
@@ -40,21 +54,6 @@ class DomeLight(Light):
     color: Vector3D
 
 
-class Shape(ABC):
-    @abstractmethod
-    def intersect(self, ray_origin: Vector3D, normalized_ray_direction: Vector3D) -> None:
-        pass
-
-
-@dataclass
-class Scene3D:
-    """The 3D scene groups together all the 3D elements that will interact with each other."""
-
-    shapes: list[Shape]
-    lights: list[PointLight | DomeLight]
-    camera: Camera
-
-
 @dataclass
 class Slot:
     color: Vector3D | Path | None
@@ -64,7 +63,23 @@ class Slot:
 @dataclass
 class Specular(Slot):
     roughness: float
+    ior: float
 
 
 class Diffuse(Slot):
     pass
+
+
+@dataclass
+class Shader:
+    diffuse: Diffuse
+    specular: Specular
+
+
+@dataclass
+class Scene3D:
+    """The 3D scene groups together all the 3D elements that will interact with each other."""
+
+    shapes: list[tuple[Shape, Shader]]
+    lights: list[PointLight | DomeLight]
+    camera: Camera

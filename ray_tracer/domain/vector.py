@@ -4,7 +4,7 @@ from typing import Any
 import numpy as np
 
 
-def extract(cond: np.ndarray, x: numbers.Number | int | float) -> numbers.Number | np.ndarray:
+def extract(cond: np.ndarray, x: numbers.Number | int | float | np.ndarray) -> numbers.Number | np.ndarray:
     """Extracts elements from an array or returns the number itself if it is a scalar.
 
     Args:
@@ -29,12 +29,10 @@ class Vector3D:
     def __abs__(self) -> float | np.ndarray:
         return self.dot(self)
 
-    def components(self) -> tuple[float | np.ndarray, float | np.ndarray, float | np.ndarray]:
-        return (self.x, self.y, self.z)
-
     def __mul__(self, other: int | float) -> "Vector3D":
         if isinstance(other, Vector3D):
             return Vector3D(self.x * other.x, self.y * other.y, self.z * other.z)
+
         return Vector3D(self.x * other, self.y * other, self.z * other)
 
     def __add__(self, other: "Vector3D") -> "Vector3D":
@@ -51,6 +49,9 @@ class Vector3D:
         if isinstance(other, Vector3D):
             return Vector3D(self.x / other.x, self.y / other.y, self.z / other.z)
         return Vector3D(self.x / other, self.y / other, self.z / other)
+
+    def components(self) -> tuple[float | np.ndarray, float | np.ndarray, float | np.ndarray]:
+        return (self.x, self.y, self.z)
 
     def norm(self) -> Any:
         """Normalizes the vector to have a magnitude of 1."""

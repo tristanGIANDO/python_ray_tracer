@@ -8,58 +8,40 @@ from ray_tracer.domain.models import (
     DomeLight,
     PointLight,
     Scene3D,
-    Shape,
+    Shader,
     Specular,
 )
 from ray_tracer.domain.vector import Vector3D
-from ray_tracer.infrastructure import NumpyPhysicalShader, NumpyRenderer, NumpySphere
+from ray_tracer.infrastructure import NumpyRenderer, NumpySphere
 
 if __name__ == "__main__":
     renderer = NumpyRenderer()
 
     scene = Scene3D(
         [
-            NumpySphere(
-                Vector3D(0.55, 0.5, 3),
-                0.5,
-                NumpyPhysicalShader(
+            (
+                NumpySphere(Vector3D(0.55, 0.5, 3), 0.5),
+                Shader(
                     Diffuse(Vector3D(1, 1, 1), 1.0),
-                    Specular(Vector3D(0, 1, 1), 0.5, 0.5),
-                    0.0,
-                    0,
-                    0.01,
-                    0,
+                    Specular(Vector3D(0, 1, 1), 0.5, 0.5, 1.5),
                 ),
             ),
-            NumpySphere(
-                Vector3D(-0.55, 0.1, 1),
-                1,
-                NumpyPhysicalShader(
-                    Diffuse(Path("sourceimages/2k_mars.jpg"), 1.0),
-                    Specular(Vector3D(1, 1, 1), 1.0, 0.5),
-                    0,
-                    0.1,
-                    0.1,
-                    0.0,
-                ),
+            (
+                NumpySphere(Vector3D(-0.55, 0.1, 1), 0.3),
+                Shader(Diffuse(Path("sourceimages/2k_mars.jpg"), 1.0), Specular(Vector3D(1, 1, 1), 1.0, 0.5, 1.5)),
             ),
-            NumpySphere(
-                Vector3D(0, -99999.5, 0),
-                99999,
-                NumpyPhysicalShader(
+            (
+                NumpySphere(Vector3D(0, -99999.5, 0), 99999),
+                Shader(
                     Diffuse(Vector3D(1, 1, 1), 1.0),
-                    Specular(Vector3D(0, 1, 1), 0.5, 0.5),
-                    0.1,
-                    0.5,
-                    0.0,
-                    1.0,
+                    Specular(Vector3D(0, 1, 1), 0.5, 0.5, 1.5),
                 ),
             ),
         ],
         [  # TODO: use multiple lights
             PointLight(1.0, Vector3D(-5, 5, -10)),
             # PointLight(Vector3D(-2, 1, 2)),
-            DomeLight(0.1, Vector3D(1, 1, 1)),
+            DomeLight(0.1, Vector3D(0.0, 0.0, 0.0), Vector3D(1, 1, 1)),
         ],
         Camera(Vector3D(0, 0.2, -2), int(1920 / 2), int(1080 / 2)),
     )
