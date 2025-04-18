@@ -3,8 +3,6 @@ from pathlib import Path
 
 from ray_tracer.domain.vector import Vector3D
 
-FARAWAY = 1.0e39
-
 
 @dataclass
 class Object3D:

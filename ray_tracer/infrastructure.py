@@ -6,7 +6,6 @@ from PIL import Image
 
 from ray_tracer.application import Renderer
 from ray_tracer.domain.models import (
-    FARAWAY,
     Camera,
     Diffuse,
     DomeLight,
@@ -33,7 +32,7 @@ class Sphere3D(Object3D):
         """This function calculates the intersection between a ray (defined by its origin
         and direction) and a sphere (defined by self.position and self.radius).
         It returns the distance between the ray's origin and the intersection point,
-        or a special value (FARAWAY) if no intersection exists.
+        or a far away value if no intersection exists.
         """
         projected_ray_direction = 2 * normalized_ray_direction.dot(ray_origin - self.position)
         ajusted_squared_distance = (
@@ -52,7 +51,7 @@ class Sphere3D(Object3D):
         )
 
         condition_to_have_intersection = (discriminator > 0) & (solution > 0)
-        return np.where(condition_to_have_intersection, solution, FARAWAY)
+        return np.where(condition_to_have_intersection, solution, 1.0e39)  # FARAWAY
 
     def get_uvs(self, hit_point: Vector3D) -> tuple[np.ndarray, np.ndarray]:
         normals = self.get_normals(hit_point)
@@ -79,7 +78,7 @@ class NumpyRenderer(Renderer):
         color = Vector3D(0, 0, 0)
 
         for shape_data, distance in zip(scene.shapes, distances, strict=False):
-            hit = (nearest_distance != FARAWAY) & (distance == nearest_distance)
+            hit = (nearest_distance != 1.0e39) & (distance == nearest_distance)
 
             if np.any(hit):  # keep only the intersected points
                 extracted_distance_to_intersection: np.ndarray = extract(hit, distance)
