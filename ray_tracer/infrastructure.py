@@ -270,7 +270,7 @@ def calculate_phong_specular(
         1 - specular.roughness
     ) * 100  # more user friendly to have roughness between 0 and 1 where 0 means no roughness and 1 means very rough
 
-    return Vector3D(1, 1, 1) * np.power(np.clip(normals.dot(phong), 0, 1), unclamped_roughness) * self.specular_gain
+    return Vector3D(1, 1, 1) * np.power(np.clip(normals.dot(phong), 0, 1), unclamped_roughness) * specular.intensity
 
 
 def calculate_iridescence(  # TODO: NE SE VOIT QUE DANS LE SPECULAIRE!
