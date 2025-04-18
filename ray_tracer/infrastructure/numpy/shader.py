@@ -1,7 +1,10 @@
+from dataclasses import dataclass
 from functools import reduce
+from pathlib import Path
 from typing import Self
 
 import numpy as np
+from PIL import Image
 
 from ray_tracer.application import Renderer, Shader
 from ray_tracer.domain import DomeLight, Scene3D, Shape
@@ -11,6 +14,21 @@ from ray_tracer.infrastructure.numpy.shape import NumpyTexturedSphere
 FARAWAY = 1.0e39
 
 
+@dataclass
+class Slot:
+    color: NumpyRGBColor | Path | None
+    intensity: float
+
+
+@dataclass
+class Specular(Slot):
+    roughness: float
+
+
+class Diffuse(Slot):
+    pass
+
+
 class Texture:
     def __init__(self, color: NumpyRGBColor | None = None) -> None:
         self.color = color if color is not None else NumpyRGBColor(1, 1, 1)
@@ -18,16 +36,6 @@ class Texture:
     def get_color(self, intersection_point: NumpyVectorArray3D) -> NumpyRGBColor:
         """Returns the color of the texture at the intersection point."""
         return self.color
-
-
-# class UVTexture(Texture):
-#     def __init__(self, texture_path: str) -> None:
-#         image = Image.open(texture_path).convert("RGB")
-#         self.texture = np.asarray(image) / 255.0
-#         self.height, self.width, _ = self.texture.shape
-
-#     def get_color(self, intersection_point: NumpyVectorArray3D) -> NumpyRGBColor:
-#         return super().get_color(intersection_point)
 
 
 class TextureChecker(Texture):
@@ -46,23 +54,23 @@ class TextureChecker(Texture):
 class NumpyShader(Shader):
     def __init__(
         self,
+        diffuse_slot: Diffuse,
+        specular_slot: Specular,
         reflection_gain: float,
         specular_gain: float,
         specular_roughness: float,
         iridescence_gain: float,
-        diffuse_gain: float,
-        diffuse_color: Texture,
     ):
         self.reflection_gain = reflection_gain
         self.specular_gain = specular_gain
         self.specular_roughness = specular_roughness
         self.iridescence_gain = iridescence_gain
-        self.diffuse_gain = diffuse_gain
-        self.diffuse_color = diffuse_color
         self.specular_ior = 1.5  # default value for glass
         self.thin_film_weight = 0.1  # range [0, 1]
         self.thin_film_thickness = 0.3  # range [0, 1]
         self.thin_film_ior = 1.4  # range [1, 3]
+        self.diffuse_slot = diffuse_slot
+        self.specular_slot = specular_slot
 
     def to_rgb(self, shader: Self) -> NumpyRGBColor:
         return NumpyRGBColor(
@@ -94,9 +102,9 @@ class NumpyShader(Shader):
             shape,
         )
 
-        color = self._calculate_ambient_color()
+        # color = self._calculate_ambient_color()
 
-        color += self._calculate_diffuse(intersection_point, normal, direction_to_light, is_in_light, shape)
+        color = self._calculate_diffuse(intersection_point, normal, direction_to_light, is_in_light, shape)
 
         reflection = self._calculate_reflection(
             nudged_intersection_point,
@@ -147,13 +155,18 @@ class NumpyShader(Shader):
         """Calculates the diffuse color of the shape at the intersection point."""
         diffuse_light_intensity = np.maximum(normal.dot(direction_to_light), 0)
 
-        # Check if the shape is a NumpyTexturedSphere and apply texture
-        if isinstance(shape, NumpyTexturedSphere):
-            texture_color = shape.diffusecolor(intersection_point)
-        else:
-            texture_color = self.diffuse_color.get_color(intersection_point)
+        if self.diffuse_slot.color and isinstance(self.diffuse_slot.color, Path):
+            diffuse_color = Image.open(self.diffuse_slot.color).convert("RGB")
 
-        return texture_color * diffuse_light_intensity * is_in_light * self.diffuse_gain
+            u, v = shape.get_uvs(intersection_point)
+            diffuse_color = self.get_texture_color(diffuse_color, u, v)
+
+        elif isinstance(self.diffuse_slot.color, NumpyRGBColor):
+            diffuse_color = self.diffuse_slot.color
+        else:
+            diffuse_color = NumpyRGBColor(0.5, 0.5, 0.5)
+
+        return diffuse_color * diffuse_light_intensity * is_in_light * self.diffuse_slot.intensity
 
     def _calculate_reflection(  # TODO: VOIR TRANSMISSION
         self,
@@ -333,3 +346,17 @@ class NumpyShader(Shader):
         spec_final = NumpyRGBColor(1, 1, 1) * np.where(NdotV <= 0, 0, spec_final)
 
         return NumpyRGBColor(spec_final.x, spec_final.y, spec_final.z)
+
+    def get_texture_color(self, texture: Image, u: np.ndarray, v: np.ndarray) -> NumpyRGBColor:
+        texture_data = np.array(texture)  # shape = (height, width, channels)
+
+        u = np.mod(u, 1)  # if u > 1, wrap around
+        v = np.mod(v, 1)
+
+        # find u and v in the image
+        i = (u * (texture_data.shape[1] - 1)).astype(int)
+        j = (v * (texture_data.shape[0] - 1)).astype(int)
+
+        colors = texture_data[j, i, :3] / 255.0
+
+        return NumpyRGBColor(colors[..., 0], colors[..., 1], colors[..., 2])
