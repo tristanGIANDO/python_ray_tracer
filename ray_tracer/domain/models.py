@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from pathlib import Path
 
+from ray_tracer.domain.vector import Vector3D
 
-class Vector3D:
-    def __init__(self, x: float, y: float, z: float) -> None:
-        (self.x, self.y, self.z) = (x, y, z)
+FARAWAY = 1.0e39
 
 
 @dataclass
@@ -53,3 +53,18 @@ class Scene3D:
     shapes: list[Shape]
     lights: list[PointLight | DomeLight]
     camera: Camera
+
+
+@dataclass
+class Slot:
+    color: Vector3D | Path | None
+    intensity: float
+
+
+@dataclass
+class Specular(Slot):
+    roughness: float
+
+
+class Diffuse(Slot):
+    pass
